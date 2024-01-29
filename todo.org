@@ -1,0 +1,64 @@
+Questions:
+* Do I need header files?
+Not necessarily. Usually the kernels are used in the same
+file they're defined. In complex projects you might want header
+files.
+* What is cooperative_groups.h?
+It helps threads cooperate and synchronize
+* cuda_gl_interop.h?
+allows some kind of connection between cuda and opengl.
+I think it lets you call opengl functions from cuda.
+* cuda_runtime.h?
+Lets you call cuda API stuff from the host.
+If you compile a file with nvcc, then you don't need to include
+this.
+* helper_cuda.h?
+This is a file with some helper functions from the CUDA example repo.
+Not important
+
+* How to use CMake to build cpp files and cu files and link them?
+Uh.
+https://developer.nvidia.com/blog/building-cuda-applications-cmake/
+
+* PTX
+is an intermediate representation. A vritual machine assembly
+language. It does not give you control over register usage.
+You apparently need to disassmble the actual machine code and then
+reassmble it if you want to optimize it for real. Or something like
+that idk.
+
+* blockIdx.x vs blockIdx.y ???
+It's just a readablity thing. If your problem is well suited to
+splitting the blocks into 2D then do it.
+
+Apparently actually, it helps a lot with 2D locality in the on-chip
+shared memory.
+https://stackoverflow.com/questions/16403972/cuda-thread-addressing-threadidx-x-threadidx-y-threadidx-z-and-block-addres
+
+* Can we use classes in cuda code?
+not std::vector, because all those functions in the standard
+template library are defined on the host...
+
+But can classes in general be used on the kernel? Probably not
+right because the constructor itself can't be defined on the gpu.
+
+Apparently you can use structs in cuda kernels. Not sure about
+full on classes. Will have to test that I guess.
+
+Yes you can use classes in cuda kernels. You can do
+like:
+__global__ void do_thing(Thing *thing)
+{
+    thing->the_thing(input);
+}
+
+only if the_thing is a device or global function.
+
+* You can use blockIdx.x in a __device__ function no problem.
+I think blockIdx.x etc... will be available if you call the
+__device__ function with cuda kernel syntax:
+<<10, 10>>device_func()
+
+* Apparently extern "C" is not really needed
+Only if you load the gpu kernel from binary by name. In which case
+you need to use extern "C" to avoid name mangling in C++.
