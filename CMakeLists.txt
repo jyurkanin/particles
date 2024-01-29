@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.12)
 project(particles LANGUAGES CXX CUDA)
 
 find_package(Eigen3 REQUIRED NO_MODULE)
@@ -6,6 +6,8 @@ find_package(PythonLibs 3.8)
 find_package(PkgConfig REQUIRED)
 find_package(CUDA REQUIRED)
 find_package(SDL2 REQUIRED)
+
+pkg_check_modules(SDL2_TTF REQUIRED SDL2_ttf)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -58,7 +60,8 @@ set_target_properties(test_all PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 target_include_directories(test_all PRIVATE ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(test_all ${PYTHON_LIBRARIES})
-target_link_libraries(test_all SDL2)
+target_link_libraries(test_all ${SDL2_LIBRARIES})
+target_link_libraries(test_all ${SDL2_TTF_LIBRARIES})
 target_link_libraries(test_all GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(test_all)
@@ -85,6 +88,7 @@ target_sources(
 
 target_include_directories(sim PRIVATE ${PYTHON_INCLUDE_DIRS})
 target_include_directories(sim PRIVATE ${SDL2_INCLUDE_DIRS})
+target_include_directories(sim PRIVATE ${SDL2_TTF_INCLUDE_DIRS})
 target_link_libraries(sim ${PYTHON_LIBRARIES})
 target_link_libraries(sim ${SDL2_LIBRARIES})
-
+target_link_libraries(sim ${SDL2_TTF_LIBRARIES})

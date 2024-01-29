@@ -2,24 +2,28 @@
 #include "kernels/Particle.cuh"
 #include "Parameters.h"
 
+
+#include <cstring>
 #include <iostream>
 #include <iomanip>
-#include <vector>
 #include <cmath>
+#include <algorithm>
 
 ParticleEngine::ParticleEngine()
 {
-    cudaMallocManaged(&m_particles, m_num_particles*sizeof(Particle));
-    // cudaMallocManaged(&m_cuda_pixel_buf, sizeof(unsigned char)*3*Parameters::m_width * Parameters::m_height);
-    m_cuda_pixel_buf = new unsigned char[3*Parameters::m_width * Parameters::m_height];
+    //cudaMallocManaged(&m_particles, m_num_particles*sizeof(Particle));
+    // cudaMallocManaged(&m_cuda_pixel_buf, sizeof(unsigned int)*Parameters::m_width * Parameters::m_height);
+
+    m_particles = new Particle[m_num_particles];
+    m_cuda_pixel_buf = new unsigned int[Parameters::m_width * Parameters::m_height];
 }
 
 
 
 ParticleEngine::~ParticleEngine()
 {
-    cudaFree(m_cuda_pixel_buf);
     cudaFree(m_particles);
+    cudaFree(m_cuda_pixel_buf);
 }
 
 
@@ -34,21 +38,55 @@ void ParticleEngine::initialize()
         cpu_particles[i].m_x = std::cos(angle);
         cpu_particles[i].m_y = std::sin(angle);
         
+        cpu_particles[i].m_vx = -std::sin(angle);
+        cpu_particles[i].m_vy = std::cos(angle);
+        cpu_particles[i].m_vz = std::cos(angle);
     }
 
-    cudaMemcpy(m_particles, cpu_particles, sizeof(Particle)*m_num_particles, cudaMemcpyHostToDevice);
+    //cudaMemcpy(m_particles, cpu_particles, sizeof(Particle)*m_num_particles, cudaMemcpyHostToDevice);
+    memcpy(m_particles, cpu_particles, sizeof(Particle)*m_num_particles);
 }
 
 
+void ParticleEngine::cpu_get_min_max(float &min_x,
+                                     float &max_x,
+                                     float &min_y,
+                                     float &max_y)
+{
+    min_x = m_particles[0].m_x;
+    max_x = m_particles[0].m_x;
+    min_y = m_particles[0].m_y;
+    max_y = m_particles[0].m_y;
+    
+    for(int i = 1; i < m_num_particles; i++)
+    {
+        min_x = std::min(min_x, m_particles[i].m_x);
+        max_x = std::max(max_x, m_particles[i].m_x);
+        min_y = std::min(min_y, m_particles[i].m_y);
+        max_y = std::max(max_y, m_particles[i].m_y);
+    }
+}
+
 void ParticleEngine::runIteration()
 {
-    cpu_compute_forces(m_particles, m_num_particles);
-    cpu_euler_update(m_particles,   m_num_particles);
+    for(int i = 0; i < 100; i++)
+    {
+        cpu_compute_forces(m_particles, m_num_particles);
+        cpu_euler_update(m_particles,   m_num_particles);
+    }
     
     float max_x = 10;
     float min_x = -10;
     float max_y = 10;
     float min_y = -10;
+
+    // cpu_get_min_max(min_x, max_x, min_y, max_y);
+    
+    // max_x *= 1.01;
+    // min_x *= 1.01;
+    // max_y *= 1.01;
+    // min_y *= 1.01;
+    
     
     // get_max_x(m_particles, m_num_particles, max_x);
     // get_min_x(m_particles, m_num_particles, min_x);
@@ -64,16 +102,62 @@ void ParticleEngine::runIteration()
     cpu_draw_particles(m_particles, m_num_particles,
                        min_x, min_y, max_x, max_y,
                        m_cuda_pixel_buf, Parameters::m_width, Parameters::m_height);
-    
-    
-    //std::cout << m_particles[1].m_x << ", " << m_particles[1].m_vx << "\n";
 }
 
-void ParticleEngine::draw(unsigned char *pixbuf)
+void ParticleEngine::draw(unsigned int *pixbuf)
 {
-    const int num_pixels = Parameters::m_width * Parameters::m_height;
+    const int num_pixels = Parameters::m_width*Parameters::m_height;
+    memcpy(pixbuf, m_cuda_pixel_buf, sizeof(unsigned int)*num_pixels);
+    //cudaMemcpy(pixbuf, m_cuda_pixel_buf, sizeof(unsigned int)*num_pixels, cudaMemcpyDeviceToHost);
+}
+
+float ParticleEngine::getTotalEnergy()
+{
+    float kinetic_energy = 0;
+    for(int i = 0; i < m_num_particles; i++)
+    {
+        kinetic_energy += m_particles[i].m_vx*m_particles[i].m_vx;
+        kinetic_energy += m_particles[i].m_vy*m_particles[i].m_vy;
+        kinetic_energy += m_particles[i].m_vz*m_particles[i].m_vz;
+    }
+    kinetic_energy *= 0.5;
+
+    float potential_energy = 0;
+    for(int i = 0; i < m_num_particles; i++)
+    {
+        for(int j = i+1; j < m_num_particles; j++)
+        {
+            float dx = m_particles[j].m_x - m_particles[i].m_x;
+            float dy = m_particles[j].m_y - m_particles[i].m_y;
+            float dz = m_particles[j].m_z - m_particles[i].m_z;
+            
+            float dist = std::sqrt(dx*dx + dy*dy + dz*dz);
+            potential_energy += m_particles[i].m_mass * m_particles[j].m_mass / dist;
+        }
+    }
     
-    cudaMemcpy(pixbuf, m_cuda_pixel_buf, sizeof(unsigned char)*3*num_pixels, cudaMemcpyDeviceToHost);
+    return kinetic_energy + potential_energy;
+}
+
+std::vector<std::string> ParticleEngine::getParticleText()
+{
+    std::vector<std::string> particle_info;
+
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(4) << getTotalEnergy();
+    particle_info.push_back(ss.str());
+    
+    for(int i = 0; i < m_num_particles; i++)
+    {
+        std::stringstream stream;
+        stream << std::fixed << std::setprecision(2) << m_particles[i].m_x << "," << std::setw(6);
+        stream << std::fixed << std::setprecision(2) << m_particles[i].m_y << "," << std::setw(6);
+        stream << std::fixed << std::setprecision(2) << m_particles[i].m_z;
+
+        particle_info.push_back(stream.str());
+    }
+    
+    return particle_info;
 }
 
 void ParticleEngine::cpu_compute_forces(Particle *particles, int num_particles)
@@ -88,20 +172,20 @@ void ParticleEngine::cpu_compute_forces(Particle *particles, int num_particles)
         {
             if(i == j) continue;
             
-            float dx = particles[i].m_x - particles[j].m_x;
-            float dy = particles[i].m_y - particles[j].m_y;
-            float dz = particles[i].m_z - particles[j].m_z;
+            float dx = particles[j].m_x - particles[i].m_x;
+            float dy = particles[j].m_y - particles[i].m_y;
+            float dz = particles[j].m_z - particles[i].m_z;
             float dist = std::sqrt(dx*dx + dy*dy + dz*dz);
-            float force = 0.1*dist;
+            float force = 1.0 / dist;
             
             fx += (dx*force) / dist;
             fy += (dy*force) / dist;
             fz += (dz*force) / dist;
         }
         
-        particles[i].m_vx = fx / particles[i].m_mass;
-        particles[i].m_vy = fy / particles[i].m_mass;
-        particles[i].m_vz = fz / particles[i].m_mass;
+        particles[i].m_ax = fx / particles[i].m_mass;
+        particles[i].m_ay = fy / particles[i].m_mass;
+        particles[i].m_az = fz / particles[i].m_mass;
     }    
 
 }
@@ -109,11 +193,27 @@ void ParticleEngine::cpu_compute_forces(Particle *particles, int num_particles)
 void ParticleEngine::cpu_euler_update(Particle *particles, int num_particles)
 {
     const float timestep = 1e-3;
+    float max_norm = 0;
     for(int i = 0; i < num_particles; i++)
     {
-        particles[i].m_x += particles[i].m_vx*timestep;
-        particles[i].m_y += particles[i].m_vy*timestep;
-        particles[i].m_z += particles[i].m_vz*timestep;
+        float ax = particles[i].m_ax;
+        float ay = particles[i].m_ay;
+        float az = particles[i].m_az;
+        float norm = std::sqrt(ax*ax + ay*ay + az*az);
+        
+        max_norm = std::max(max_norm, norm);
+    }
+    
+    float scalar = timestep/max_norm;
+    for(int i = 0; i < num_particles; i++)
+    {        
+        particles[i].m_vx += particles[i].m_ax*scalar;
+        particles[i].m_vy += particles[i].m_ay*scalar;
+        particles[i].m_vz += particles[i].m_az*scalar;
+
+        particles[i].m_x += particles[i].m_vx*scalar;
+        particles[i].m_y += particles[i].m_vy*scalar;
+        particles[i].m_z += particles[i].m_vz*scalar;
     }
 
 }
@@ -121,14 +221,17 @@ void ParticleEngine::cpu_euler_update(Particle *particles, int num_particles)
 void ParticleEngine::cpu_draw_particles(const Particle *particles, const int num_particles,
                                         const float min_x, const float min_y,
                                         const float max_x, const float max_y,
-                                        unsigned char *pixelbuf, const int width, const int height)
+                                        unsigned int *pixelbuf, const int width, const int height)
 {
     for(int i = 0; i < num_particles; i++)
     {
         int x = (int)(width * (particles[i].m_x - min_x) / (max_x - min_x));
         int y = (int)(height * (particles[i].m_y - min_y) / (max_y - min_y));
         
-        pixelbuf[3*(y*width + x)] = 0xFF; // Blue
+        if((x >= 0) && (x < width) && (y >= 0) && (y < height))
+        {
+            pixelbuf[(y*width + x)] = 0xFF; // Blue
+        }
     }
 }
 
