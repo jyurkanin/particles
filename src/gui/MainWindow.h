@@ -17,7 +17,7 @@ public:
     MainWindow();
     ~MainWindow();
 
-    void run();
+    void run(int cnt);
     void loop();
 
     void drawParticleText(const std::vector<std::string> &particle_text);

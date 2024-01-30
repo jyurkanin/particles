@@ -105,12 +105,12 @@ std::pair<int,int> MainWindow::renderText(int x, int y, const std::string &text)
     return std::pair<int,int>(width, height);
 }
 
-void MainWindow::run()
+void MainWindow::run(int cnt)
 {
-    m_engine.runIteration();
+    m_engine.runIteration(cnt);
     m_engine.draw((unsigned int *) m_window_surface->pixels);
     
-    drawParticleText(m_engine.getParticleText());
+    // drawParticleText(m_engine.getParticleText());
     
     SDL_RenderPresent(m_renderer);
     
@@ -154,9 +154,9 @@ void MainWindow::run()
 void MainWindow::loop()
 {
     int i = 0;
-    while(m_ok && i < 10000)
+    while(m_ok && i < 10000000)
     {
-        run();
+        run(i);
         i++;
     }
 }

@@ -20,4 +20,5 @@ public:
     float m_az{0.0};
     
     float m_mass{1.0};
+    int m_type{0};
 };
