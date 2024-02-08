@@ -42,17 +42,19 @@ add_executable(
   test_all
   
   src/test/test_main.cpp
-  src/test/test_particles.cpp
-  src/lib/ParticleEngine.cpp
+  src/test/test_ParticleEngine.cpp
+  src/lib/CpuParticleEngine.cpp
+  src/lib/GpuParticleEngine1.cpp
   src/lib/Particle.cpp
   src/gui/MainWindow.cpp
   
-  src/kernels/Particle.cu
-  src/kernels/Particle.cuh
+  src/kernels/kernels1.cu
+  src/kernels/kernels1.cuh
   
   src/gui/MainWindow.h
   src/lib/Particle.h  
-  src/lib/ParticleEngine.h
+  src/lib/CpuParticleEngine.h
+  src/lib/GpuParticleEngine1.h
 
 )
 
@@ -73,15 +75,17 @@ target_sources(
   sim PRIVATE
   
   src/main.cpp
-  src/lib/ParticleEngine.cpp
+  src/lib/CpuParticleEngine.cpp
+  src/lib/GpuParticleEngine1.cpp
   src/lib/Particle.cpp
   src/gui/MainWindow.cpp
   
-  src/kernels/Particle.cu
-  src/kernels/Particle.cuh
+  src/kernels/kernels1.cu
+  src/kernels/kernels1.cuh
   
   src/lib/Particle.h  
-  src/lib/ParticleEngine.h
+  src/lib/CpuParticleEngine.h
+  src/lib/GpuParticleEngine1.h
   src/gui/MainWindow.h
   src/Parameters.h
 )

@@ -2,6 +2,8 @@
 
 struct Parameters
 {
-    static constexpr int m_width{640};
-    static constexpr int m_height{640};
+    static constexpr int width{640};
+    static constexpr int height{640};
+    static constexpr int num_particles{173};
+    static constexpr int seed{420};
 };

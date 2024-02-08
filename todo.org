@@ -62,3 +62,7 @@ __device__ function with cuda kernel syntax:
 * Apparently extern "C" is not really needed
 Only if you load the gpu kernel from binary by name. In which case
 you need to use extern "C" to avoid name mangling in C++.
+
+* difference between cudaMalloc and declaring with __device__
+they're the same. Both are declared in global memory.
+

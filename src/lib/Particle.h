@@ -1,12 +1,8 @@
 #pragma once
 
-
 class Particle
 {
 public:
-    Particle();
-    ~Particle();
-    
     float m_x{0.0};
     float m_y{0.0};
     float m_z{0.0};
@@ -20,5 +16,5 @@ public:
     float m_az{0.0};
     
     float m_mass{1.0};
-    int m_type{0};
+    int   m_type{0};
 };

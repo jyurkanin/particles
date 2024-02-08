@@ -2,7 +2,7 @@
 
 #include "Parameters.h"
 #include "Particle.h"
-#include "ParticleEngine.h"
+#include "CpuParticleEngine.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -32,7 +32,7 @@ private:
     SDL_Renderer *m_renderer = NULL;
     SDL_Surface *m_window_surface = NULL;
     
-    ParticleEngine m_engine;
+    CpuParticleEngine m_engine;
 
     static constexpr int m_particle_text_x{10};
     static constexpr int m_particle_text_y{10};

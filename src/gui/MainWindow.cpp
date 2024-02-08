@@ -23,7 +23,7 @@ MainWindow::MainWindow()
         return;
     }
     
-    m_window = SDL_CreateWindow("Cool Particle Stuff", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, Parameters::m_width, Parameters::m_height, SDL_WINDOW_SHOWN);
+    m_window = SDL_CreateWindow("Cool Particle Stuff", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, Parameters::width, Parameters::height, SDL_WINDOW_SHOWN);
     if(m_window == NULL)
     {
         std::cout << "SDL_CreateWindow failed: " << SDL_GetError() << "\n";
