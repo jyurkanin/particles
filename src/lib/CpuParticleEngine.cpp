@@ -110,11 +110,11 @@ void CpuParticleEngine::runIteration(int cnt)
     
     for(int i = 0; i < 1000; i++)
     {
-        compute_forces(m_particles, Parameters::num_particles);
-        euler_update(m_particles,   Parameters::num_particles);
-        draw_particles(m_particles, Parameters::num_particles,
-                           min_x, min_y, max_x, max_y,
-                           m_pixel_buf, Parameters::width, Parameters::height);
+        compute_forces(m_particles);
+        euler_update(m_particles);
+        draw_particles(m_particles,
+                       min_x, min_y, max_x, max_y,
+                       m_pixel_buf, Parameters::width, Parameters::height);
 
     }
     
@@ -123,7 +123,10 @@ void CpuParticleEngine::runIteration(int cnt)
 void CpuParticleEngine::draw(unsigned int *pixbuf)
 {
     const int num_pixels = Parameters::width*Parameters::height;
-    memcpy(pixbuf, m_pixel_buf, sizeof(unsigned int)*num_pixels);
+    for(int i = 0; i < num_pixels; i++)
+    {
+        pixbuf[i] = m_pixel_buf[i];
+    }
 }
 
 float CpuParticleEngine::getTotalEnergy()
@@ -175,9 +178,9 @@ std::vector<std::string> CpuParticleEngine::getParticleText()
     return particle_info;
 }
 
-void CpuParticleEngine::compute_forces(Particle *particles, int num_particles)
+void CpuParticleEngine::compute_forces(std::array<Particle, Parameters::num_particles> &particles)
 {
-    for(int i = 0; i < num_particles; i++)
+    for(int i = 0; i < particles.size(); i++)
     {
         float fx = 0;
         float fy = 0;
@@ -187,7 +190,7 @@ void CpuParticleEngine::compute_forces(Particle *particles, int num_particles)
         // fy += -1e-3*particles[i].m_vy;
         // fz += -1e-3*particles[i].m_vz;
         
-        for(int j = 0; j < num_particles; j++)
+        for(int j = 0; j < particles.size(); j++)
         {
             if(i == j) continue;
             
@@ -209,11 +212,11 @@ void CpuParticleEngine::compute_forces(Particle *particles, int num_particles)
 
 }
 
-void CpuParticleEngine::euler_update(Particle *particles, int num_particles)
+void CpuParticleEngine::euler_update(std::array<Particle, Parameters::num_particles> &particles)
 {
     const float timestep = 1e-4;
     float max_norm = 0;
-    for(int i = 0; i < num_particles; i++)
+    for(int i = 0; i < particles.size(); i++)
     {
         float ax = particles[i].m_ax;
         float ay = particles[i].m_ay;
@@ -229,7 +232,7 @@ void CpuParticleEngine::euler_update(Particle *particles, int num_particles)
     }
     
     float scalar = timestep / std::min(1e2f, max_norm);
-    for(int i = 0; i < num_particles; i++)
+    for(int i = 0; i < particles.size(); i++)
     {        
         particles[i].m_vx += particles[i].m_ax*scalar;
         particles[i].m_vy += particles[i].m_ay*scalar;
@@ -242,25 +245,25 @@ void CpuParticleEngine::euler_update(Particle *particles, int num_particles)
 
 }
 
-void CpuParticleEngine::draw_particles(const Particle *particles, const int num_particles,
-                                        const float min_x, const float min_y,
-                                        const float max_x, const float max_y,
-                                        unsigned int *pixelbuf, const int width, const int height)
+void CpuParticleEngine::draw_particles(const std::array<Particle, Parameters::num_particles> &particles,
+                                       const float min_x, const float min_y,
+                                       const float max_x, const float max_y,
+                                       std::array<unsigned int, Parameters::width*Parameters::height> &pixelbuf,
+                                       const int width, const int height)
 {
     float min_z = particles[0].m_z;
     float max_z = particles[0].m_z + 1e-6;
-    for(int i = 1; i < num_particles; i++)
+    for(int i = 1; i < particles.size(); i++)
     {
         min_z = std::min(min_z, particles[i].m_z);
         max_z = std::max(max_z, particles[i].m_z);
     }
     
-    for(int i = 0; i < num_particles; i++)
+    for(int i = 0; i < particles.size(); i++)
     {
         int x = (int)(width * (particles[i].m_x - min_x) / (max_x - min_x));
         int y = (int)(height * (particles[i].m_y - min_y) / (max_y - min_y));
 
-        // * (particles[i].m_z - min_z) / (max_z - min_z);
         if((x >= 0) && (x < width) && (y >= 0) && (y < height))
         {
             if(particles[i].m_type == 0)

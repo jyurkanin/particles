@@ -58,7 +58,7 @@ void GpuParticleEngine1::initialize()
 }
 
 
-void GpuParticleEngine::get_min_max(float &min_x, float &max_x, float &min_y, float &max_y)
+void GpuParticleEngine1::get_min_max(float &min_x, float &max_x, float &min_y, float &max_y)
 {
     float *gpu_min_x;
     float *gpu_max_x;
@@ -92,7 +92,7 @@ void GpuParticleEngine1::runIteration(int cnt)
     float max_y = 100;
     float min_y = -100;
 
-    kernels1::get_min_max(m_particles, Parameters::num_particles, min_x, max_x, min_y, max_y);
+    get_min_max(min_x, max_x, min_y, max_y);
     cudaDeviceSynchronize();
     
     if(cnt % 1 == 0)
@@ -102,7 +102,8 @@ void GpuParticleEngine1::runIteration(int cnt)
             m_cuda_pixel_buf[i] = 0;
         }
     }
-    
+
+    // create runIteration kernel
     for(int i = 0; i < 1000; i++)
     {
         // kernels1::compute_forces(m_particles, Parameters::num_particles);
