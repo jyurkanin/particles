@@ -1,5 +1,4 @@
 #include "CpuParticleEngine.h"
-#include "kernels/Particle.cuh"
 #include "Parameters.h"
 
 

@@ -1,11 +1,12 @@
 #include "Particle.h"
 
-Particle::Particle()
-{
+// We don't need this.
+// Particle::Particle()
+// {
     
-}
+// }
 
-Particle::~Particle()
-{
+// Particle::~Particle()
+// {
 
-}
+// }

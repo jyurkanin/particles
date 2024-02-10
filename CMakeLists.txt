@@ -46,12 +46,10 @@ add_executable(
   src/lib/CpuParticleEngine.cpp
   src/lib/GpuParticleEngine1.cpp
   src/lib/Particle.cpp
-  src/gui/MainWindow.cpp
   
   src/kernels/kernels1.cu
-  src/kernels/kernels1.cuh
+  src/kernels/kernels1.h
   
-  src/gui/MainWindow.h
   src/lib/Particle.h  
   src/lib/CpuParticleEngine.h
   src/lib/GpuParticleEngine1.h
@@ -62,8 +60,6 @@ set_target_properties(test_all PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 target_include_directories(test_all PRIVATE ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(test_all ${PYTHON_LIBRARIES})
-target_link_libraries(test_all ${SDL2_LIBRARIES})
-target_link_libraries(test_all ${SDL2_TTF_LIBRARIES})
 target_link_libraries(test_all GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(test_all)
@@ -81,7 +77,7 @@ target_sources(
   src/gui/MainWindow.cpp
   
   src/kernels/kernels1.cu
-  src/kernels/kernels1.cuh
+  src/kernels/kernels1.h
   
   src/lib/Particle.h  
   src/lib/CpuParticleEngine.h

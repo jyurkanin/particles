@@ -55,6 +55,11 @@ public:
 private:
     unsigned int *m_cuda_pixel_buf;
     Particle *m_particles;
+
+    float *m_gpu_min_x;
+    float *m_gpu_max_x;
+    float *m_gpu_min_y;
+    float *m_gpu_max_y;
     
     static constexpr int m_num_blocks = 16;
     static constexpr int m_block_size = 16;

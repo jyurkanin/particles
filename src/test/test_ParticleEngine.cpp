@@ -37,13 +37,15 @@ TEST(ParticleEngineTest, min_max)
     float cpu_max_x;
     float cpu_min_y;
     float cpu_max_y;
-    cpu_engine.get_min_max(cpu_min_x, cpu_max_x, cpu_min_y, cpu_max_y);
+    cpu_engine.get_min_max(cpu_min_x, cpu_max_x,
+                           cpu_min_y, cpu_max_y);
     
     float gpu_min_x;
     float gpu_max_x;
     float gpu_min_y;
     float gpu_max_y;
-    gpu_engine1.get_min_max(gpu_min_x, gpu_max_x, gpu_min_y, gpu_max_y);
+    gpu_engine1.get_min_max(gpu_min_x, gpu_max_x,
+                            gpu_min_y, gpu_max_y);
     
     EXPECT_EQ(cpu_min_x, gpu_min_x);
     EXPECT_EQ(cpu_max_x, gpu_max_x);
