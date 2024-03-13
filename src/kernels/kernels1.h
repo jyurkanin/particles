@@ -11,7 +11,7 @@ void get_min_max(const Particle *particles,
                  const int num_particles,
                  float *min_x, float *max_x,
                  float *min_y, float *max_y);
-
+    
 void draw_particles(const Particle *particles, const int num_particles,
                     const float min_x, const float max_x,
                     const float min_y, const float max_y,

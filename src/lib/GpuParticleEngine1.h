@@ -18,7 +18,7 @@ public:
     std::array<Particle, Parameters::num_particles> getParticles()
     {
         std::array<Particle, Parameters::num_particles> particles;
-        for(int i = 0; i < particles.size(); i++)
+        for(unsigned i = 0; i < particles.size(); i++)
         {
             particles[i] = m_particles[i];
         }
@@ -28,7 +28,7 @@ public:
     std::array<unsigned int, Parameters::width*Parameters::height> getPixelBuf()
     {
         std::array<unsigned int, Parameters::width*Parameters::height> pixel_buf;
-        for(int i = 0; i < pixel_buf.size(); i++)
+        for(unsigned i = 0; i < pixel_buf.size(); i++)
         {
             pixel_buf[i] = m_cuda_pixel_buf[i];
         }
@@ -42,14 +42,12 @@ public:
     float getTotalEnergy();
 
     // Wrappers around kernels for testing
-    void get_min_max(float &min_x, float &max_x, float &min_y, float &max_y);
-    void compute_forces(Particle *particles, int num_particles);
-    void euler_update(Particle *particles, int num_particles);
-    
-    void draw_particles(const Particle *particles, const int num_particles,
-                            const float min_x, const float min_y,
-                            const float max_x, const float max_y,
-                            unsigned int *pixelbuf, const int width, const int height);
+    void get_min_max(float &min_x, float &max_x,
+                     float &min_y, float &max_y);
+    void compute_forces();
+    void euler_update();
+    void draw_particles(const float min_x, const float max_x,
+                        const float min_y, const float max_y);
 
     
 private:

@@ -20,7 +20,6 @@ inline void compute1(const Particle &p1,
     float dz = p1.m_z - p2.m_z;
     float dist = std::sqrt(dx*dx + dy*dy + dz*dz);
     float force = p1.m_mass * p2.m_mass / dist;
-            
     fx = (dx*force) / dist;
     fy = (dy*force) / dist;
     fz = (dz*force) / dist;
@@ -109,11 +108,9 @@ void CpuParticleEngine::runIteration(int cnt)
     
     for(int i = 0; i < 1000; i++)
     {
-        compute_forces(m_particles);
-        euler_update(m_particles);
-        draw_particles(m_particles,
-                       min_x, min_y, max_x, max_y,
-                       m_pixel_buf, Parameters::width, Parameters::height);
+        compute_forces();
+        euler_update();
+        draw_particles(min_x, max_x, min_y, max_y);
 
     }
     
@@ -177,9 +174,9 @@ std::vector<std::string> CpuParticleEngine::getParticleText()
     return particle_info;
 }
 
-void CpuParticleEngine::compute_forces(std::array<Particle, Parameters::num_particles> &particles)
+void CpuParticleEngine::compute_forces()
 {
-    for(int i = 0; i < particles.size(); i++)
+    for(unsigned i = 0; i < m_particles.size(); i++)
     {
         float fx = 0;
         float fy = 0;
@@ -189,7 +186,7 @@ void CpuParticleEngine::compute_forces(std::array<Particle, Parameters::num_part
         // fy += -1e-3*particles[i].m_vy;
         // fz += -1e-3*particles[i].m_vz;
         
-        for(int j = 0; j < particles.size(); j++)
+        for(unsigned j = 0; j < m_particles.size(); j++)
         {
             if(i == j) continue;
             
@@ -197,78 +194,79 @@ void CpuParticleEngine::compute_forces(std::array<Particle, Parameters::num_part
             float dfy;
             float dfz;
             
-            compute1(particles[j], particles[i], dfx, dfy, dfz);
+            compute1(m_particles[j], m_particles[i], dfx, dfy, dfz);
             
             fx += dfx;
             fy += dfy;
             fz += dfz;
         }
         
-        particles[i].m_ax = fx / particles[i].m_mass;
-        particles[i].m_ay = fy / particles[i].m_mass;
-        particles[i].m_az = fz / particles[i].m_mass;
+        m_particles[i].m_ax = fx / m_particles[i].m_mass;
+        m_particles[i].m_ay = fy / m_particles[i].m_mass;
+        m_particles[i].m_az = fz / m_particles[i].m_mass;
     }    
 
 }
 
-void CpuParticleEngine::euler_update(std::array<Particle, Parameters::num_particles> &particles)
+void CpuParticleEngine::euler_update()
 {
     const float timestep = 1e-4;
     float max_norm = 0;
-    for(int i = 0; i < particles.size(); i++)
+    for(unsigned i = 0; i < m_particles.size(); i++)
     {
-        float ax = particles[i].m_ax;
-        float ay = particles[i].m_ay;
-        float az = particles[i].m_az;
+        float ax = m_particles[i].m_ax;
+        float ay = m_particles[i].m_ay;
+        float az = m_particles[i].m_az;
         
-        float vx = particles[i].m_vx;
-        float vy = particles[i].m_vy;
-        float vz = particles[i].m_vz;
+        float vx = m_particles[i].m_vx;
+        float vy = m_particles[i].m_vy;
+        float vz = m_particles[i].m_vz;
         
         float norm = std::sqrt(ax*ax + ay*ay + az*az + vx*vx + vy*vy + vz*vz);
         
         max_norm = std::max(max_norm, norm);
     }
     
-    float scalar = timestep / std::min(1e2f, max_norm);
-    for(int i = 0; i < particles.size(); i++)
+    float scalar = timestep; // / std::min(1e2f, max_norm);
+    for(unsigned i = 0; i < m_particles.size(); i++)
     {        
-        particles[i].m_vx += particles[i].m_ax*scalar;
-        particles[i].m_vy += particles[i].m_ay*scalar;
-        particles[i].m_vz += particles[i].m_az*scalar;
+        m_particles[i].m_vx += m_particles[i].m_ax*scalar;
+        m_particles[i].m_vy += m_particles[i].m_ay*scalar;
+        m_particles[i].m_vz += m_particles[i].m_az*scalar;
 
-        particles[i].m_x += particles[i].m_vx*scalar;
-        particles[i].m_y += particles[i].m_vy*scalar;
-        particles[i].m_z += particles[i].m_vz*scalar;
+        m_particles[i].m_x += m_particles[i].m_vx*scalar;
+        m_particles[i].m_y += m_particles[i].m_vy*scalar;
+        m_particles[i].m_z += m_particles[i].m_vz*scalar;
     }
 
 }
 
-void CpuParticleEngine::draw_particles(const std::array<Particle, Parameters::num_particles> &particles,
-                                       const float min_x, const float min_y,
-                                       const float max_x, const float max_y,
-                                       std::array<unsigned int, Parameters::width*Parameters::height> &pixelbuf,
-                                       const int width, const int height)
+void CpuParticleEngine::draw_particles(const float min_x, const float max_x,
+                                       const float min_y, const float max_y)
 {
-    float min_z = particles[0].m_z;
-    float max_z = particles[0].m_z + 1e-6;
-    for(int i = 1; i < particles.size(); i++)
-    {
-        min_z = std::min(min_z, particles[i].m_z);
-        max_z = std::max(max_z, particles[i].m_z);
-    }
+
+    const int width = Parameters::width;
+    const int height = Parameters::height;
     
-    for(int i = 0; i < particles.size(); i++)
+    // float min_z = m_particles[0].m_z;
+    // float max_z = m_particles[0].m_z + 1e-6;
+    // for(unsigned i = 1; i < m_particles.size(); i++)
+    // {
+    //     min_z = std::min(min_z, m_particles[i].m_z);
+    //     max_z = std::max(max_z, m_particles[i].m_z);
+    // }
+    
+    for(unsigned i = 0; i < m_particles.size(); i++)
     {
-        int x = (int)(width * (particles[i].m_x - min_x) / (max_x - min_x));
-        int y = (int)(height * (particles[i].m_y - min_y) / (max_y - min_y));
+        int x = (int)(width * (m_particles[i].m_x - min_x) / (max_x - min_x));
+        int y = (int)(height * (m_particles[i].m_y - min_y) / (max_y - min_y));
 
         if((x >= 0) && (x < width) && (y >= 0) && (y < height))
         {
-            if(particles[i].m_type == 0)
-                pixelbuf[(y*width + x)] = 0xFF * (particles[i].m_z - min_z) / (max_z - min_z);
-            if(particles[i].m_type == 1)
-                pixelbuf[(y*width + x)] = 0xFF00;
+            // if(m_particles[i].m_type == 0)
+            m_pixel_buf[(y*width + x)] = 0xFF; // * (m_particles[i].m_z - min_z) / (max_z - min_z);
+            // if(m_particles[i].m_type == 1)
+            //     m_pixel_buf[(y*width + x)] = 0xFF00;
         }
     }
 }
