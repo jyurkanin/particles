@@ -149,7 +149,7 @@ void GpuParticleEngine1::runIteration(int cnt)
     m_gpu_max_y[0] = 100;
     
     // create runIteration kernel
-    for(int i = 0; i < 10; i++)
+    for(int i = 0; i < 100; i++)
     {
         kernels1::compute_forces(m_particles, Parameters::num_particles);
         kernels1::euler_update(m_particles,   Parameters::num_particles);

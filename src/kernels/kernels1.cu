@@ -153,9 +153,9 @@ __global__ void cuda_draw_particles(const Particle *particles, const int num_par
         
         if((x >= 0) && (x < width) && (y >= 0) && (y < height))
         {
-            float z_clamped = fmaxf(-10.0, fminf(10.0, particles[i].m_z));
-            float z_scalar = 0.9*((z_clamped + 10.0) / 20.0) + 0.1;
-            pixelbuf[(y*width) + x] = (unsigned) (0xFF * z_scalar);
+            float z_clamp_blue = fmaxf(-10.0, fminf(10.0, particles[i].m_z));
+            unsigned z_blue = 0xFF * 0.9*((z_clamp_blue + 10.0) / 20.0) + 0.1;
+            pixelbuf[(y*width) + x] = z_blue;
             pixelbuf[(y*width) + x] |= (0xFF0000*particles[i].m_type);
         }
     }
