@@ -43,6 +43,49 @@ GpuParticleEngine1::~GpuParticleEngine1()
 
 void GpuParticleEngine1::initialize()
 {
+    initialize1();
+}
+
+void GpuParticleEngine1::initialize1()
+{
+    srand(Parameters::seed);
+    
+    Particle particles[Parameters::num_particles];
+    particles[0].m_x = -40.0;
+    particles[0].m_y = 0.0;
+    particles[0].m_vx = 0.0;
+    particles[0].m_vy = -1000.0;
+    particles[0].m_mass = 1.0e6;
+    particles[0].m_type = 1;
+
+    particles[1].m_x = 40.0;
+    particles[1].m_y = 0.0;
+    particles[1].m_vx = 0.0;
+    particles[1].m_vy = 1000.0;
+    particles[1].m_mass = 1.0e6;
+    particles[1].m_type = 1;
+    
+    for(int i = 2; i < Parameters::num_particles; i++)
+    {
+        float angle = (i*2*M_PI) / Parameters::num_particles;
+        
+        particles[i].m_x = 10.0*std::cos(angle);
+        particles[i].m_y = 10.0*std::sin(angle);
+        particles[i].m_z = ((20.0*i) / (Parameters::num_particles - 1)) - 10.0;
+        particles[i].m_vx = -100*std::sin(angle);
+        particles[i].m_vy = 100*std::cos(angle);
+        particles[i].m_vz = 0.0;
+
+        // particles[i].m_vx = getRand(0,100)*std::sin(angle);
+        // particles[i].m_vy = getRand(0,100)*std::cos(angle);
+        // particles[i].m_vz = getRand(0,10);
+    }
+        
+    cudaMemcpy(m_particles, particles, sizeof(Particle)*Parameters::num_particles, cudaMemcpyHostToDevice);
+}
+
+void GpuParticleEngine1::initialize2()
+{
     srand(Parameters::seed);
     
     Particle particles[Parameters::num_particles];
@@ -50,18 +93,18 @@ void GpuParticleEngine1::initialize()
     particles[0].m_y = 0.0;
     particles[0].m_vx = 0.0;
     particles[0].m_vy = 0.0;
-    particles[0].m_mass = 1.0e6;
+    particles[0].m_mass = 1.0e5;
     particles[0].m_type = 1;
     
     for(int i = 1; i < Parameters::num_particles; i++)
     {
-        float angle = (i*2*M_PI) / Parameters::num_particles;
         
-        particles[i].m_x = 10.0*std::cos(angle);
-        particles[i].m_y = 10.0*std::sin(angle);
-        particles[i].m_vx = getRand(0,100)*std::sin(angle);
-        particles[i].m_vy = getRand(0,100)*std::cos(angle);
-        particles[i].m_vz = getRand(0,10);
+        particles[i].m_x = 10 + (100.0*i) / Parameters::num_particles;
+        particles[i].m_y = 0;
+        particles[i].m_z = ((20.0*i) / (Parameters::num_particles - 1)) - 10.0;
+        particles[i].m_vx = 0;
+        particles[i].m_vy = -100;
+        particles[i].m_vz = 0;
     }
         
     cudaMemcpy(m_particles, particles, sizeof(Particle)*Parameters::num_particles, cudaMemcpyHostToDevice);
@@ -93,16 +136,20 @@ void GpuParticleEngine1::runIteration(int cnt)
         {
             m_cuda_pixel_buf[i] = 0;
         }
-    }
+    }    
     
-    
-    kernels1::get_min_max(m_particles,
-                          Parameters::num_particles,
-                          m_gpu_min_x, m_gpu_max_x,
-                          m_gpu_min_y, m_gpu_max_y);
+    // kernels1::get_min_max(m_particles,
+    //                       Parameters::num_particles,
+    //                       m_gpu_min_x, m_gpu_max_x,
+    //                       m_gpu_min_y, m_gpu_max_y);
+
+    m_gpu_min_x[0] = -100;
+    m_gpu_max_x[0] = 100;
+    m_gpu_min_y[0] = -100;
+    m_gpu_max_y[0] = 100;
     
     // create runIteration kernel
-    for(int i = 0; i < 1000; i++)
+    for(int i = 0; i < 10; i++)
     {
         kernels1::compute_forces(m_particles, Parameters::num_particles);
         kernels1::euler_update(m_particles,   Parameters::num_particles);
@@ -110,9 +157,8 @@ void GpuParticleEngine1::runIteration(int cnt)
                                  m_gpu_min_x[0], m_gpu_max_x[0],
                                  m_gpu_min_y[0], m_gpu_max_y[0],
                                  m_cuda_pixel_buf, Parameters::width, Parameters::height);
-
     }
-
+        
     cudaDeviceSynchronize();
 }
 

@@ -63,9 +63,9 @@ void CpuParticleEngine::initialize()
         
         m_particles[i].m_x = 10.0*std::cos(angle);
         m_particles[i].m_y = 10.0*std::sin(angle);
-        m_particles[i].m_vx = getRand(0,100)*std::sin(angle);
-        m_particles[i].m_vy = getRand(0,100)*std::cos(angle);
-        m_particles[i].m_vz = getRand(0,10);
+        m_particles[i].m_vx = -getRand(8,10)*std::sin(angle);
+        m_particles[i].m_vy = getRand(8,10)*std::cos(angle);
+        m_particles[i].m_vz = getRand(0,1);
     }    
 }
 
@@ -91,10 +91,10 @@ void CpuParticleEngine::get_min_max(float &min_x,
 
 void CpuParticleEngine::runIteration(int cnt)
 {
-    float max_x = 100;
-    float min_x = -100;
-    float max_y = 100;
-    float min_y = -100;
+    float max_x = 1000;
+    float min_x = -1000;
+    float max_y = 1000;
+    float min_y = -1000;
 
     get_min_max(min_x, max_x, min_y, max_y);
 
@@ -106,7 +106,7 @@ void CpuParticleEngine::runIteration(int cnt)
         }
     }
     
-    for(int i = 0; i < 1000; i++)
+    for(int i = 0; i < 10; i++)
     {
         compute_forces();
         euler_update();

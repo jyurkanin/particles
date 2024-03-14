@@ -38,9 +38,10 @@ __global__ void cuda_compute_forces(Particle *particles, int num_particles)
     
     for(unsigned ii = idx; ii < num_particles; ii += num_threads)
     {
-        float fx = 0;
-        float fy = 0;
-        float fz = 0;
+        float damp = 1e-2;
+        float fx = -damp*particles[ii].m_vx;
+        float fy = -damp*particles[ii].m_vy;
+        float fz = -damp*particles[ii].m_vz;
         
         for(unsigned jj = 0; jj < num_particles; jj++)
         {
@@ -49,7 +50,7 @@ __global__ void cuda_compute_forces(Particle *particles, int num_particles)
             float dx = particles[jj].m_x - particles[ii].m_x;
             float dy = particles[jj].m_y - particles[ii].m_y;
             float dz = particles[jj].m_z - particles[ii].m_z;
-            float dist = sqrtf(dx*dx + dy*dy + dz*dz);
+            float dist = fmaxf(1e-6, sqrtf(dx*dx + dy*dy + dz*dz));
             float force = particles[jj].m_mass * particles[ii].m_mass / dist;
             
             fx += (dx * force) / dist;
@@ -152,7 +153,10 @@ __global__ void cuda_draw_particles(const Particle *particles, const int num_par
         
         if((x >= 0) && (x < width) && (y >= 0) && (y < height))
         {
-            pixelbuf[(y*width) + x] = 0xFF;   
+            float z_clamped = fmaxf(-10.0, fminf(10.0, particles[i].m_z));
+            float z_scalar = 0.9*((z_clamped + 10.0) / 20.0) + 0.1;
+            pixelbuf[(y*width) + x] = (unsigned) (0xFF * z_scalar);
+            pixelbuf[(y*width) + x] |= (0xFF0000*particles[i].m_type);
         }
     }
 }

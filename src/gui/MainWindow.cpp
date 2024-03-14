@@ -107,8 +107,11 @@ std::pair<int,int> MainWindow::renderText(int x, int y, const std::string &text)
 
 void MainWindow::run(int cnt)
 {
-    m_engine.runIteration(cnt);
-    m_engine.draw((unsigned int *) m_window_surface->pixels);
+    if(!m_pause)
+    {
+        m_engine.runIteration(cnt);
+        m_engine.draw((unsigned int *) m_window_surface->pixels);
+    }
     
     // drawParticleText(m_engine.getParticleText());
     
@@ -125,7 +128,9 @@ void MainWindow::run(int cnt)
             case SDLK_ESCAPE:
                 m_ok = false;
                 break;
-                
+            case SDLK_SPACE:
+                m_pause = !m_pause;
+                break;
             default:
                 break;
             }
@@ -148,7 +153,7 @@ void MainWindow::run(int cnt)
 
     SDL_UpdateWindowSurface(m_window);
 
-    usleep(1000);
+    usleep(10000);
 }
 
 void MainWindow::loop()

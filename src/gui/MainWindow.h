@@ -26,6 +26,7 @@ public:
     
 private:
     bool m_ok{false};
+    bool m_pause{true};
     
     TTF_Font *m_font = NULL;
     
