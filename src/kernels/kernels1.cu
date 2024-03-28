@@ -1,4 +1,4 @@
-#include "kernels1.h"
+#include "kernels.h"
 #include "Parameters.h"
 
 #include <cassert>
@@ -6,9 +6,9 @@
 #include <iomanip>
 #include <iostream>
 
-namespace kernels1
+namespace kernels
 {
-
+    
 __global__ void cuda_euler_update(Particle *particles, int num_particles)
 {
     unsigned tid = threadIdx.x;
@@ -154,9 +154,9 @@ __global__ void cuda_draw_particles(const Particle *particles, const int num_par
         if((x >= 0) && (x < width) && (y >= 0) && (y < height))
         {
             float z_clamp_blue = fmaxf(-10.0, fminf(10.0, particles[i].m_z));
-            unsigned z_blue = 0xFF * 0.9*((z_clamp_blue + 10.0) / 20.0) + 0.1;
+            unsigned z_blue = floorf(0xFF * 0.9*((z_clamp_blue + 10.0) / 20.0) + 0.1);
             pixelbuf[(y*width) + x] = z_blue;
-            pixelbuf[(y*width) + x] |= (0xFF0000*particles[i].m_type);
+            //pixelbuf[(y*width) + x] |= (0xFF0000*particles[i].m_type);
         }
     }
 }
@@ -223,7 +223,21 @@ void draw_particles(const Particle *particles, const int num_particles,
                                                                            pixelbuf, width, height);
 }
 
-
+void mega_kernel(Particle *particles, const int num_particles,
+                 const float min_x, const float max_x,
+                 const float min_y, const float max_y,
+                 unsigned int *pixelbuf, const int width, const int height)
+{
+    for(unsigned i = 0; i < Parameters::num_iterations; i++)
+    {
+        cuda_compute_forces<<<Parameters::num_blocks, Parameters::blocksize>>>(particles, num_particles);
+        cuda_euler_update<<<Parameters::num_blocks, Parameters::blocksize>>>(particles, num_particles);
+        cuda_draw_particles<<<Parameters::num_blocks, Parameters::blocksize>>>(particles, num_particles,
+                                                                               min_x, max_x,
+                                                                               min_y, max_y,
+                                                                               pixelbuf, width, height);        
+    }
+}
 
 
 

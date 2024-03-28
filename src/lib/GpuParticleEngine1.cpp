@@ -1,5 +1,5 @@
 #include "GpuParticleEngine1.h"
-#include "kernels/kernels1.h"
+#include "kernels/kernels.h"
 #include "Parameters.h"
 
 
@@ -75,10 +75,6 @@ void GpuParticleEngine1::initialize1()
         particles[i].m_vx = -100*std::sin(angle);
         particles[i].m_vy = 100*std::cos(angle);
         particles[i].m_vz = 0.0;
-
-        // particles[i].m_vx = getRand(0,100)*std::sin(angle);
-        // particles[i].m_vy = getRand(0,100)*std::cos(angle);
-        // particles[i].m_vz = getRand(0,10);
     }
         
     cudaMemcpy(m_particles, particles, sizeof(Particle)*Parameters::num_particles, cudaMemcpyHostToDevice);
@@ -114,7 +110,7 @@ void GpuParticleEngine1::initialize2()
 void GpuParticleEngine1::get_min_max(float &min_x, float &max_x,
                                      float &min_y, float &max_y)
 {        
-    kernels1::get_min_max(m_particles,
+    kernels::get_min_max(m_particles,
                           Parameters::num_particles,
                           m_gpu_min_x, m_gpu_max_x,
                           m_gpu_min_y, m_gpu_max_y);
@@ -138,7 +134,7 @@ void GpuParticleEngine1::runIteration(int cnt)
         }
     }    
     
-    // kernels1::get_min_max(m_particles,
+    // kernels::get_min_max(m_particles,
     //                       Parameters::num_particles,
     //                       m_gpu_min_x, m_gpu_max_x,
     //                       m_gpu_min_y, m_gpu_max_y);
@@ -149,16 +145,10 @@ void GpuParticleEngine1::runIteration(int cnt)
     m_gpu_max_y[0] = 100;
     
     // create runIteration kernel
-    for(int i = 0; i < 100; i++)
-    {
-        kernels1::compute_forces(m_particles, Parameters::num_particles);
-        kernels1::euler_update(m_particles,   Parameters::num_particles);
-        kernels1::draw_particles(m_particles, Parameters::num_particles,
-                                 m_gpu_min_x[0], m_gpu_max_x[0],
-                                 m_gpu_min_y[0], m_gpu_max_y[0],
-                                 m_cuda_pixel_buf, Parameters::width, Parameters::height);
-    }
-        
+    kernels::mega_kernel(m_particles, Parameters::num_particles,
+                          m_gpu_min_x[0], m_gpu_max_x[0],
+                          m_gpu_min_y[0], m_gpu_max_y[0],
+                          m_cuda_pixel_buf, Parameters::width, Parameters::height);
     cudaDeviceSynchronize();
 }
 
@@ -173,7 +163,7 @@ std::vector<std::string> GpuParticleEngine1::getParticleText()
     std::vector<std::string> particle_info;
 
     double energy = 0;
-    // kernels1::getTotalEnergy(m_particles, Parameters::num_particles, energy);
+    // kernels::getTotalEnergy(m_particles, Parameters::num_particles, energy);
     cudaDeviceSynchronize();
     
     std::stringstream ss;
@@ -195,20 +185,20 @@ std::vector<std::string> GpuParticleEngine1::getParticleText()
 
 void GpuParticleEngine1::compute_forces()
 {
-    kernels1::compute_forces(m_particles, Parameters::num_particles);
+    kernels::compute_forces(m_particles, Parameters::num_particles);
     cudaDeviceSynchronize();
 }
 
 void GpuParticleEngine1::euler_update()
 {
-    kernels1::euler_update(m_particles, Parameters::num_particles);
+    kernels::euler_update(m_particles, Parameters::num_particles);
     cudaDeviceSynchronize();
 }
 
 void GpuParticleEngine1::draw_particles(const float min_x, const float max_x,
                                         const float min_y, const float max_y)
 {
-    kernels1::draw_particles(m_particles, Parameters::num_particles,
+    kernels::draw_particles(m_particles, Parameters::num_particles,
                              min_x, max_x,
                              min_y, max_y,
                              m_cuda_pixel_buf,

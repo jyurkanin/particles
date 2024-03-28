@@ -18,7 +18,7 @@ inline void compute1(const Particle &p1,
     float dx = p1.m_x - p2.m_x;
     float dy = p1.m_y - p2.m_y;
     float dz = p1.m_z - p2.m_z;
-    float dist = std::sqrt(dx*dx + dy*dy + dz*dz);
+    float dist = std::max(1e-6f, std::sqrt(dx*dx + dy*dy + dz*dz));
     float force = p1.m_mass * p2.m_mass / dist;
     fx = (dx*force) / dist;
     fy = (dy*force) / dist;
@@ -50,25 +50,32 @@ void CpuParticleEngine::initialize()
 {
     srand(Parameters::seed);
     
-    m_particles[0].m_x = 0.0;
+    m_particles[0].m_x = -40.0;
     m_particles[0].m_y = 0.0;
     m_particles[0].m_vx = 0.0;
-    m_particles[0].m_vy = 0.0;
+    m_particles[0].m_vy = -1000.0;
     m_particles[0].m_mass = 1.0e6;
     m_particles[0].m_type = 1;
 
-    for(int i = 1; i < Parameters::num_particles; i++)
+    m_particles[1].m_x = 40.0;
+    m_particles[1].m_y = 0.0;
+    m_particles[1].m_vx = 0.0;
+    m_particles[1].m_vy = 1000.0;
+    m_particles[1].m_mass = 1.0e6;
+    m_particles[1].m_type = 1;
+    
+    for(int i = 2; i < Parameters::num_particles; i++)
     {
         float angle = (i*2*M_PI) / Parameters::num_particles;
         
         m_particles[i].m_x = 10.0*std::cos(angle);
         m_particles[i].m_y = 10.0*std::sin(angle);
-        m_particles[i].m_vx = -getRand(8,10)*std::sin(angle);
-        m_particles[i].m_vy = getRand(8,10)*std::cos(angle);
-        m_particles[i].m_vz = getRand(0,1);
-    }    
+        m_particles[i].m_z = ((20.0*i) / (Parameters::num_particles - 1)) - 10.0;
+        m_particles[i].m_vx = -100*std::sin(angle);
+        m_particles[i].m_vy = 100*std::cos(angle);
+        m_particles[i].m_vz = 0.0;
+    }
 }
-
 
 void CpuParticleEngine::get_min_max(float &min_x,
                                     float &max_x,
@@ -91,10 +98,10 @@ void CpuParticleEngine::get_min_max(float &min_x,
 
 void CpuParticleEngine::runIteration(int cnt)
 {
-    float max_x = 1000;
-    float min_x = -1000;
-    float max_y = 1000;
-    float min_y = -1000;
+    float max_x = 100;
+    float min_x = -100;
+    float max_y = 100;
+    float min_y = -100;
 
     get_min_max(min_x, max_x, min_y, max_y);
 
@@ -178,13 +185,10 @@ void CpuParticleEngine::compute_forces()
 {
     for(unsigned i = 0; i < m_particles.size(); i++)
     {
-        float fx = 0;
-        float fy = 0;
-        float fz = 0;
-
-        // fx += -1e-3*particles[i].m_vx;
-        // fy += -1e-3*particles[i].m_vy;
-        // fz += -1e-3*particles[i].m_vz;
+        float damp = 1e-2;
+        float fx = -damp*m_particles[i].m_vx;
+        float fy = -damp*m_particles[i].m_vy;
+        float fz = -damp*m_particles[i].m_vz;
         
         for(unsigned j = 0; j < m_particles.size(); j++)
         {
@@ -247,15 +251,7 @@ void CpuParticleEngine::draw_particles(const float min_x, const float max_x,
 
     const int width = Parameters::width;
     const int height = Parameters::height;
-    
-    // float min_z = m_particles[0].m_z;
-    // float max_z = m_particles[0].m_z + 1e-6;
-    // for(unsigned i = 1; i < m_particles.size(); i++)
-    // {
-    //     min_z = std::min(min_z, m_particles[i].m_z);
-    //     max_z = std::max(max_z, m_particles[i].m_z);
-    // }
-    
+        
     for(unsigned i = 0; i < m_particles.size(); i++)
     {
         int x = (int)(width * (m_particles[i].m_x - min_x) / (max_x - min_x));
@@ -263,10 +259,10 @@ void CpuParticleEngine::draw_particles(const float min_x, const float max_x,
 
         if((x >= 0) && (x < width) && (y >= 0) && (y < height))
         {
-            // if(m_particles[i].m_type == 0)
-            m_pixel_buf[(y*width + x)] = 0xFF; // * (m_particles[i].m_z - min_z) / (max_z - min_z);
-            // if(m_particles[i].m_type == 1)
-            //     m_pixel_buf[(y*width + x)] = 0xFF00;
+            float z_clamp_blue = fmaxf(-10.0, fminf(10.0, m_particles[i].m_z));
+            unsigned z_blue = std::floor(0xFF * 0.9*((z_clamp_blue + 10.0) / 20.0) + 0.1);
+            m_pixel_buf[(y*width) + x] = z_blue;
+            //m_pixel_buf[(y*width) + x] |= (0xFF0000*m_particles[i].m_type);
         }
     }
 }

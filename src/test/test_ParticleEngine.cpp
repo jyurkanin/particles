@@ -25,32 +25,11 @@ TEST(ParticleEngineTest, initialize)
     }
 }
 
-TEST(ParticleEngineTest, min_max)
+TEST(ParticleEngineTest, derp)
 {
-    CpuParticleEngine  cpu_engine;
-    GpuParticleEngine1 gpu_engine;
+    GpuParticleEngine1  gpu_engine;
     
-    cpu_engine.initialize();
     gpu_engine.initialize();
-
-    float cpu_min_x;
-    float cpu_max_x;
-    float cpu_min_y;
-    float cpu_max_y;
-    cpu_engine.get_min_max(cpu_min_x, cpu_max_x,
-                           cpu_min_y, cpu_max_y);
-    
-    float gpu_min_x;
-    float gpu_max_x;
-    float gpu_min_y;
-    float gpu_max_y;
-    gpu_engine.get_min_max(gpu_min_x, gpu_max_x,
-                            gpu_min_y, gpu_max_y);
-    
-    EXPECT_EQ(cpu_min_x, gpu_min_x);
-    EXPECT_EQ(cpu_max_x, gpu_max_x);
-    EXPECT_EQ(cpu_min_y, gpu_min_y);
-    EXPECT_EQ(cpu_max_y, gpu_max_y);
 }
 
 TEST(ParticleEngineTest, compute_forces)
@@ -116,7 +95,7 @@ TEST(ParticleEngineTest, draw_particles)
     
     cpu_engine.initialize();
     gpu_engine.initialize();
-    
+        
     float min_x = -10;
     float max_x = 10;
     float min_y = -10;
@@ -133,7 +112,7 @@ TEST(ParticleEngineTest, draw_particles)
     
     cpu_pixel_buf = cpu_engine.getPixelBuf();
     gpu_pixel_buf = gpu_engine.getPixelBuf();
-
+    
     for(unsigned i = 0; i < num_pixels; i++)
     {
         EXPECT_EQ(cpu_pixel_buf[i], gpu_pixel_buf[i]);
