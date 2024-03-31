@@ -47,7 +47,7 @@ add_executable(
   src/lib/GpuParticleEngine1.cpp
   src/lib/Particle.cpp
   
-  src/kernels/kernels2.cu
+  src/kernels/kernels3.cu
   src/kernels/kernels.h
   
   src/lib/Particle.h  
@@ -76,7 +76,7 @@ target_sources(
   src/lib/Particle.cpp
   src/gui/MainWindow.cpp
   
-  src/kernels/kernels2.cu
+  src/kernels/kernels3.cu
   src/kernels/kernels.h
   
   src/lib/Particle.h  

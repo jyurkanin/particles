@@ -17,7 +17,9 @@ between cpu and gpu. So I'm going to move on and accept the error.
 # Benchmark
 100 calls to runIteration()
 
-| Version | Run Time |
-|---------+----------|
-| 1       | 4.23772  |
-| 2       | |
+| Version | Run Time | Improvement |
+|---------+----------+-------------|
+| 1       | 40.2377  | garbo |
+| 2       | 2.05122  | Combined kernels into 1 big one. Removed cudaDeviceSynchronize. |
+| 3       | 1.50391  | Vectorized the shit into struct of float*  instead of Particle* |
+
