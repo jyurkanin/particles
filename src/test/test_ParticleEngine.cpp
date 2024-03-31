@@ -123,10 +123,11 @@ TEST(ParticleEngineTest, benchmark)
     
     auto start_time = std::chrono::system_clock::now();
     
-    for(int i = 0; i < 100; i++)
+    for(int i = 0; i < 1; i++)
     {
         engine.runIteration();
     }
+    cudaDeviceSynchronize();
 
     auto end_time = std::chrono::system_clock::now();
 

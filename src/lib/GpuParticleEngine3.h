@@ -63,6 +63,8 @@ public:
 private:
     unsigned int *m_cuda_pixel_buf;
 
+    float *m_mem_vec;
+    
     float *m_x_vec;
     float *m_y_vec;
     float *m_z_vec;
