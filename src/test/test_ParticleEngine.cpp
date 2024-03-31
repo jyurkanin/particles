@@ -1,5 +1,5 @@
 #include <CpuParticleEngine.h>
-#include <GpuParticleEngine1.h>
+#include <GpuParticleEngine3.h>
 #include <Particle.h>
 #include <iostream>
 #include <chrono>
@@ -10,7 +10,7 @@
 TEST(ParticleEngineTest, initialize)
 {
     CpuParticleEngine  cpu_engine;
-    GpuParticleEngine1 gpu_engine;
+    GpuParticleEngine3 gpu_engine;
     
     cpu_engine.initialize();
     gpu_engine.initialize();
@@ -30,7 +30,7 @@ TEST(ParticleEngineTest, initialize)
 TEST(ParticleEngineTest, compute_forces)
 {
     CpuParticleEngine cpu_engine;
-    GpuParticleEngine1 gpu_engine;
+    GpuParticleEngine3 gpu_engine;
     
     cpu_engine.initialize();
     gpu_engine.initialize();
@@ -54,7 +54,7 @@ TEST(ParticleEngineTest, compute_forces)
 TEST(ParticleEngineTest, euler_update)
 {
     CpuParticleEngine cpu_engine;
-    GpuParticleEngine1 gpu_engine;
+    GpuParticleEngine3 gpu_engine;
     
     cpu_engine.initialize();
     gpu_engine.initialize();
@@ -86,7 +86,7 @@ TEST(ParticleEngineTest, euler_update)
 TEST(ParticleEngineTest, draw_particles)
 {
     CpuParticleEngine cpu_engine;
-    GpuParticleEngine1 gpu_engine;
+    GpuParticleEngine3 gpu_engine;
     
     cpu_engine.initialize();
     gpu_engine.initialize();
@@ -117,7 +117,7 @@ TEST(ParticleEngineTest, draw_particles)
 TEST(ParticleEngineTest, benchmark)
 {
     //CpuParticleEngine engine;
-    GpuParticleEngine1 engine;
+    GpuParticleEngine3 engine;
     
     engine.initialize();
     

@@ -22,4 +22,4 @@ between cpu and gpu. So I'm going to move on and accept the error.
 | 1       | 40.2377  | garbo |
 | 2       | 2.05122  | Combined kernels into 1 big one. Removed cudaDeviceSynchronize. |
 | 3       | 1.50391  | Vectorized the shit into struct of float*  instead of Particle* |
-
+| 3.1     | 1.38789  | Removed Particle* from the engine entirely. |

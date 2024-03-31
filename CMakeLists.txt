@@ -44,7 +44,7 @@ add_executable(
   src/test/test_main.cpp
   src/test/test_ParticleEngine.cpp
   src/lib/CpuParticleEngine.cpp
-  src/lib/GpuParticleEngine1.cpp
+  src/lib/GpuParticleEngine3.cpp
   src/lib/Particle.cpp
   
   src/kernels/kernels3.cu
@@ -52,7 +52,7 @@ add_executable(
   
   src/lib/Particle.h  
   src/lib/CpuParticleEngine.h
-  src/lib/GpuParticleEngine1.h
+  src/lib/GpuParticleEngine3.h
 
 )
 
@@ -72,7 +72,7 @@ target_sources(
   
   src/main.cpp
   src/lib/CpuParticleEngine.cpp
-  src/lib/GpuParticleEngine1.cpp
+  src/lib/GpuParticleEngine3.cpp
   src/lib/Particle.cpp
   src/gui/MainWindow.cpp
   
@@ -81,7 +81,7 @@ target_sources(
   
   src/lib/Particle.h  
   src/lib/CpuParticleEngine.h
-  src/lib/GpuParticleEngine1.h
+  src/lib/GpuParticleEngine3.h
   src/gui/MainWindow.h
   src/Parameters.h
 )

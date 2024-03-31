@@ -97,68 +97,7 @@ __global__ void cuda_copy_old_new(float *in_x_vec, float *in_y_vec, float *in_z_
         in_vy_vec[ii] = out_vy_vec[ii];
         in_vz_vec[ii] = out_vz_vec[ii];
     }
-}
-    
-__global__ void cuda_copy_into_vectors(float *in_x_vec, float *in_y_vec, float *in_z_vec,
-                                       float *in_vx_vec, float *in_vy_vec, float *in_vz_vec,
-                                       float *in_mass_vec, float *in_type_vec,
-                                       const Particle* particles, const unsigned num_particles
-                                       )
-{
-	unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
-	unsigned num_threads = gridDim.x * blockDim.x;
-	
-	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
-	{
-        in_x_vec[ii] = particles[ii].m_x;
-        in_y_vec[ii] = particles[ii].m_y;
-        in_z_vec[ii] = particles[ii].m_z;
-
-        in_vx_vec[ii] = particles[ii].m_vx;
-        in_vy_vec[ii] = particles[ii].m_vy;
-        in_vz_vec[ii] = particles[ii].m_vz;
-
-        in_mass_vec[ii] = particles[ii].m_mass;
-        in_type_vec[ii] = particles[ii].m_type;
-    }
-}
-
-__global__ void cuda_copy_into_particles(const float *in_x_vec,  const float *in_y_vec,  const float *in_z_vec,
-                                        const float *in_vx_vec, const float *in_vy_vec, const float *in_vz_vec,
-                                        const float *in_ax_vec, const float *in_ay_vec, const float *in_az_vec,
-                                        Particle* particles, const unsigned num_particles
-                                      )
-{
-	unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
-	unsigned num_threads = gridDim.x * blockDim.x;
-	
-	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
-	{
-        particles[ii].m_x = in_x_vec[ii];
-        particles[ii].m_y = in_y_vec[ii];
-        particles[ii].m_z = in_z_vec[ii];
-
-        particles[ii].m_vx = in_vx_vec[ii];
-        particles[ii].m_vy = in_vy_vec[ii];
-        particles[ii].m_vz = in_vz_vec[ii];
-
-        particles[ii].m_ax = in_ax_vec[ii];
-        particles[ii].m_ay = in_ay_vec[ii];
-        particles[ii].m_az = in_az_vec[ii];
-    }
-}
-
-    
-
-float *in_x_vec;
-float *in_y_vec;
-float *in_z_vec;
-float *in_vx_vec;
-float *in_vy_vec;
-float *in_vz_vec;
-
-float *in_mass_vec;
-float *in_type_vec;
+}   
 
 float *out_x_vec;
 float *out_y_vec;
@@ -172,16 +111,6 @@ float *out_az_vec;
 	
 void init()
 {
-	cudaMalloc(&in_x_vec, Parameters::num_particles * sizeof(float));
-    cudaMalloc(&in_y_vec, Parameters::num_particles * sizeof(float));
-    cudaMalloc(&in_z_vec, Parameters::num_particles * sizeof(float));
-	cudaMalloc(&in_vx_vec, Parameters::num_particles * sizeof(float));
-    cudaMalloc(&in_vy_vec, Parameters::num_particles * sizeof(float));
-    cudaMalloc(&in_vz_vec, Parameters::num_particles * sizeof(float));
-
-    cudaMalloc(&in_mass_vec, Parameters::num_particles * sizeof(float));
-    cudaMalloc(&in_type_vec, Parameters::num_particles * sizeof(float));
-    
 	cudaMalloc(&out_x_vec, Parameters::num_particles * sizeof(float));
     cudaMalloc(&out_y_vec, Parameters::num_particles * sizeof(float));
     cudaMalloc(&out_z_vec, Parameters::num_particles * sizeof(float));
@@ -193,24 +122,21 @@ void init()
     cudaMalloc(&out_az_vec, Parameters::num_particles * sizeof(float));
 }
 
-void mega_kernel(Particle *particles, const int num_particles,
+void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
+                 float *vx_vec, float *vy_vec, float *vz_vec,
+                 float *ax_vec, float *ay_vec, float *az_vec,
+                 float *mass_vec, float *type_vec,
+                 const int num_particles,
 				 const float min_x, const float max_x,
 				 const float min_y, const float max_y,
 				 unsigned *pixel_buf, const int width, const int height)
 {
-    cuda_copy_into_vectors<<<Parameters::num_blocks, Parameters::blocksize>>>
-        (in_x_vec,   in_y_vec,   in_z_vec,
-         in_vx_vec,  in_vy_vec,  in_vz_vec,
-         in_mass_vec, in_type_vec,
-         particles, num_particles
-         );
-    
 	for(unsigned i = 0; i < Parameters::num_iterations; i++)
 	{
 		cuda_mega_kernel<<<Parameters::num_blocks, Parameters::blocksize>>>
-            (in_x_vec,   in_y_vec,   in_z_vec,
-             in_vx_vec,  in_vy_vec,  in_vz_vec,
-             in_mass_vec, in_type_vec,
+            (x_vec,   y_vec,   z_vec,
+             vx_vec,  vy_vec,  vz_vec,
+             mass_vec, type_vec,
              out_x_vec,  out_y_vec,  out_z_vec,
              out_vx_vec, out_vy_vec, out_vz_vec,
              out_ax_vec, out_ay_vec, out_az_vec,
@@ -220,25 +146,21 @@ void mega_kernel(Particle *particles, const int num_particles,
              pixel_buf, width, height);
 
         cuda_copy_old_new<<<Parameters::num_blocks, Parameters::blocksize>>>
-            (in_x_vec,   in_y_vec,   in_z_vec,
-             in_vx_vec,  in_vy_vec,  in_vz_vec,
-             out_x_vec,  out_y_vec,  out_z_vec,
+            (x_vec, y_vec, z_vec,
+             vx_vec, vy_vec, vz_vec,
+             out_x_vec, out_y_vec, out_z_vec,
              out_vx_vec, out_vy_vec, out_vz_vec,
              num_particles);
 
 	}
-
-    cuda_copy_into_particles<<<Parameters::num_blocks, Parameters::blocksize>>>
-        (out_x_vec,   out_y_vec,   out_z_vec,
-         out_vx_vec,  out_vy_vec,  out_vz_vec,
-         out_ax_vec,  out_ay_vec,  out_az_vec,
-         particles, num_particles
-         );
-
 }
 	
 	
-void compute_forces(Particle *particles, int num_particles)
+void compute_forces(float *x_vec, float *y_vec, float *z_vec,
+                    float *vx_vec, float *vy_vec, float *vz_vec,
+                    float *ax_vec, float *ay_vec, float *az_vec,
+                    float *mass_vec, float *type_vec,
+                    int num_particles)
 {
 	float min_x = -10.0;
 	float min_y = -10.0;
@@ -248,13 +170,22 @@ void compute_forces(Particle *particles, int num_particles)
 	unsigned *pixel_buf;
 	cudaMalloc(&pixel_buf, sizeof(unsigned) * Parameters::width * Parameters::height);
 
-	mega_kernel(particles, num_particles,
-				min_x, max_x, min_y, max_y,
+	mega_kernel(x_vec, y_vec, z_vec,
+                vx_vec, vy_vec, vz_vec,
+                ax_vec, ay_vec, az_vec,
+                mass_vec, type_vec,
+                num_particles,
+				min_x, max_x,
+                min_y, max_y,
 				pixel_buf, Parameters::width, Parameters::height);
 	
 	cudaFree(pixel_buf);
 }
-void euler_update(Particle *particles, int num_particles)
+void euler_update(float *x_vec, float *y_vec, float *z_vec,
+                  float *vx_vec, float *vy_vec, float *vz_vec,
+                  float *ax_vec, float *ay_vec, float *az_vec,
+                  float *mass_vec, float *type_vec,
+                  int num_particles)
 {
 	float min_x = -10.0;
 	float min_y = -10.0;
@@ -264,21 +195,35 @@ void euler_update(Particle *particles, int num_particles)
 	unsigned *pixel_buf;
 	cudaMalloc(&pixel_buf, sizeof(unsigned) * Parameters::width * Parameters::height);
 
-	mega_kernel(particles, num_particles,
-				min_x, max_x, min_y, max_y,
-				pixel_buf, Parameters::width, Parameters::height);
+	mega_kernel(x_vec, y_vec, z_vec,
+                vx_vec, vy_vec, vz_vec,
+                ax_vec, ay_vec, az_vec,
+                mass_vec, type_vec,
+                num_particles,
+				min_x, max_x,
+                min_y, max_y,
+				pixel_buf, Parameters::width, Parameters::height);    
 	
 	cudaFree(pixel_buf);
 }
 
-void draw_particles(Particle *particles, const int num_particles,
+void draw_particles(float *x_vec, float *y_vec, float *z_vec,
+                    float *vx_vec, float *vy_vec, float *vz_vec,
+                    float *ax_vec, float *ay_vec, float *az_vec,
+                    float *mass_vec, float *type_vec,
+                    const int num_particles,
 					const float min_x, const float max_x,
 					const float min_y, const float max_y,
 					unsigned *pixel_buf, const int width, const int height)
 {
-	mega_kernel(particles, num_particles,
-				min_x, max_x, min_y, max_y,
-				pixel_buf, width, height);
+    mega_kernel(x_vec, y_vec, z_vec,
+                vx_vec, vy_vec, vz_vec,
+                ax_vec, ay_vec, az_vec,
+                mass_vec, type_vec,
+                num_particles,
+				min_x, max_x,
+                min_y, max_y,
+				pixel_buf, Parameters::width, Parameters::height);
 }
 
 

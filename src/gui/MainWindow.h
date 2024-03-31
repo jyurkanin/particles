@@ -3,7 +3,7 @@
 #include "Parameters.h"
 #include "Particle.h"
 #include "CpuParticleEngine.h"
-#include "GpuParticleEngine1.h"
+#include "GpuParticleEngine3.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -34,7 +34,7 @@ private:
     SDL_Renderer *m_renderer = NULL;
     SDL_Surface *m_window_surface = NULL;
     
-    GpuParticleEngine1 m_engine;
+    GpuParticleEngine3 m_engine;
 
     static constexpr int m_particle_text_x{10};
     static constexpr int m_particle_text_y{10};
