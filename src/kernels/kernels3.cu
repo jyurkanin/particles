@@ -18,14 +18,16 @@ __global__ void cuda_mega_kernel(const float *in_x_vec, const float *in_y_vec, c
                                  float *out_vx_vec, float *out_vy_vec, float *out_vz_vec,
                                  float *out_ax_vec, float *out_ay_vec, float *out_az_vec,
 								 const int num_particles,
-								 const float min_x, const float max_x,
-								 const float min_y, const float max_y,
 								 unsigned *pixel_buf, const int width, const int height)
 {
 	unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned num_threads = gridDim.x * blockDim.x;
 	
 	const float scalar = 1e-4;
+    const float min_x = -100;
+    const float max_x = 100;
+    const float min_y = -100;
+    const float max_y = 100;
 	
 	// compute accelerations
 	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
@@ -127,8 +129,6 @@ void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
                  float *ax_vec, float *ay_vec, float *az_vec,
                  float *mass_vec, float *type_vec,
                  const int num_particles,
-				 const float min_x, const float max_x,
-				 const float min_y, const float max_y,
 				 unsigned *pixel_buf, const int width, const int height)
 {
 	for(unsigned i = 0; i < Parameters::num_iterations; i++)
@@ -141,8 +141,6 @@ void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
              out_vx_vec, out_vy_vec, out_vz_vec,
              out_ax_vec, out_ay_vec, out_az_vec,
              num_particles,
-             min_x, max_x,
-             min_y, max_y,
              pixel_buf, width, height);
 
         cuda_copy_old_new<<<Parameters::num_blocks, Parameters::blocksize>>>
@@ -162,11 +160,6 @@ void compute_forces(float *x_vec, float *y_vec, float *z_vec,
                     float *mass_vec, float *type_vec,
                     int num_particles)
 {
-	float min_x = -10.0;
-	float min_y = -10.0;
-	float max_x = 10.0;
-	float max_y = 10.0;
-	
 	unsigned *pixel_buf;
 	cudaMalloc(&pixel_buf, sizeof(unsigned) * Parameters::width * Parameters::height);
 
@@ -175,8 +168,6 @@ void compute_forces(float *x_vec, float *y_vec, float *z_vec,
                 ax_vec, ay_vec, az_vec,
                 mass_vec, type_vec,
                 num_particles,
-				min_x, max_x,
-                min_y, max_y,
 				pixel_buf, Parameters::width, Parameters::height);
 	
 	cudaFree(pixel_buf);
@@ -187,11 +178,6 @@ void euler_update(float *x_vec, float *y_vec, float *z_vec,
                   float *mass_vec, float *type_vec,
                   int num_particles)
 {
-	float min_x = -10.0;
-	float min_y = -10.0;
-	float max_x = 10.0;
-	float max_y = 10.0;
-
 	unsigned *pixel_buf;
 	cudaMalloc(&pixel_buf, sizeof(unsigned) * Parameters::width * Parameters::height);
 
@@ -200,8 +186,6 @@ void euler_update(float *x_vec, float *y_vec, float *z_vec,
                 ax_vec, ay_vec, az_vec,
                 mass_vec, type_vec,
                 num_particles,
-				min_x, max_x,
-                min_y, max_y,
 				pixel_buf, Parameters::width, Parameters::height);    
 	
 	cudaFree(pixel_buf);
@@ -212,8 +196,6 @@ void draw_particles(float *x_vec, float *y_vec, float *z_vec,
                     float *ax_vec, float *ay_vec, float *az_vec,
                     float *mass_vec, float *type_vec,
                     const int num_particles,
-					const float min_x, const float max_x,
-					const float min_y, const float max_y,
 					unsigned *pixel_buf, const int width, const int height)
 {
     mega_kernel(x_vec, y_vec, z_vec,
@@ -221,8 +203,6 @@ void draw_particles(float *x_vec, float *y_vec, float *z_vec,
                 ax_vec, ay_vec, az_vec,
                 mass_vec, type_vec,
                 num_particles,
-				min_x, max_x,
-                min_y, max_y,
 				pixel_buf, Parameters::width, Parameters::height);
 }
 

@@ -91,15 +91,14 @@ TEST(ParticleEngineTest, draw_particles)
     cpu_engine.initialize();
     gpu_engine.initialize();
         
-    float min_x = -10;
-    float max_x = 10;
-    float min_y = -10;
-    float max_y = 10;
+    float min_x = -100;
+    float max_x = 100;
+    float min_y = -100;
+    float max_y = 100;
     
     cpu_engine.draw_particles(min_x, max_x,
                               min_y, max_y);
-    gpu_engine.draw_particles(min_x, max_x,
-                              min_y, max_y);
+    gpu_engine.draw_particles();
 
     constexpr unsigned num_pixels = Parameters::width * Parameters::height;
     std::array<unsigned int, num_pixels> cpu_pixel_buf;
@@ -123,11 +122,11 @@ TEST(ParticleEngineTest, benchmark)
     
     auto start_time = std::chrono::system_clock::now();
     
-    for(int i = 0; i < 1; i++)
+    for(int i = 0; i < 100; i++)
     {
         engine.runIteration();
     }
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 
     auto end_time = std::chrono::system_clock::now();
 

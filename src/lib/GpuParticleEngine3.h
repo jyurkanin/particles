@@ -56,14 +56,13 @@ public:
 
     void compute_forces();
     void euler_update();
-    void draw_particles(const float min_x, const float max_x,
-                        const float min_y, const float max_y);
+    void draw_particles();
 
     
 private:
     unsigned int *m_cuda_pixel_buf;
 
-    float *m_mem_vec;
+    void *m_mem_vec;
     
     float *m_x_vec;
     float *m_y_vec;
@@ -79,10 +78,5 @@ private:
     
     float *m_mass_vec;
     float *m_type_vec;
-
-    float *m_gpu_min_x;
-    float *m_gpu_max_x;
-    float *m_gpu_min_y;
-    float *m_gpu_max_y;
 };
 

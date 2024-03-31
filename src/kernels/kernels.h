@@ -27,8 +27,6 @@ void draw_particles(float *x_vec, float *y_vec, float *z_vec,
                     float *ax_vec, float *ay_vec, float *az_vec,
                     float *mass_vec, float *type_vec,
                     const int num_particles,
-					const float min_x, const float max_x,
-					const float min_y, const float max_y,
 					unsigned *pixel_buf, const int width, const int height);
 
 void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
@@ -36,8 +34,6 @@ void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
                  float *ax_vec, float *ay_vec, float *az_vec,
                  float *mass_vec, float *type_vec,
                  const int num_particles,
-				 const float min_x, const float max_x,
-				 const float min_y, const float max_y,
 				 unsigned *pixel_buf, const int width, const int height);
     
 void init();

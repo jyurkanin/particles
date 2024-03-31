@@ -18,28 +18,29 @@ inline float getRand(const float min, const float max)
 GpuParticleEngine3::GpuParticleEngine3()
 {
     //todo: replace managed with device
-    cudaMallocManaged(&m_x_vec, Parameters::num_particles * sizeof(float));
-    cudaMallocManaged(&m_y_vec, Parameters::num_particles * sizeof(float));
-    cudaMallocManaged(&m_z_vec, Parameters::num_particles * sizeof(float));
+    unsigned bytes_per_vec = Parameters::num_particles * sizeof(float);
+    unsigned num_vec = 11;
+    unsigned num_pixel_bytes = sizeof(unsigned int) * Parameters::width * Parameters::height;
     
-    cudaMallocManaged(&m_vx_vec, Parameters::num_particles * sizeof(float));
-    cudaMallocManaged(&m_vy_vec, Parameters::num_particles * sizeof(float));
-    cudaMallocManaged(&m_vz_vec, Parameters::num_particles * sizeof(float));
-    
-    cudaMallocManaged(&m_ax_vec, Parameters::num_particles * sizeof(float));
-    cudaMallocManaged(&m_ay_vec, Parameters::num_particles * sizeof(float));
-    cudaMallocManaged(&m_az_vec, Parameters::num_particles * sizeof(float));
+    cudaMallocManaged(&m_mem_vec, (bytes_per_vec*num_vec) + num_pixel_bytes);
 
-    cudaMallocManaged(&m_mass_vec, Parameters::num_particles * sizeof(float));
-    cudaMallocManaged(&m_type_vec, Parameters::num_particles * sizeof(float));
+    m_x_vec = (float*)(m_mem_vec + (0*bytes_per_vec));
+    m_y_vec = (float*)(m_mem_vec + (1*bytes_per_vec));
+    m_z_vec = (float*)(m_mem_vec + (2*bytes_per_vec));
     
-    cudaMallocManaged(&m_cuda_pixel_buf, sizeof(unsigned int) * Parameters::width * Parameters::height);
+    m_vx_vec = (float*)(m_mem_vec + (3*bytes_per_vec));
+    m_vy_vec = (float*)(m_mem_vec + (4*bytes_per_vec));
+    m_vz_vec = (float*)(m_mem_vec + (5*bytes_per_vec));
+     
+    m_ax_vec = (float*)(m_mem_vec + (6*bytes_per_vec));
+    m_ay_vec = (float*)(m_mem_vec + (7*bytes_per_vec));
+    m_az_vec = (float*)(m_mem_vec + (8*bytes_per_vec));
     
-    cudaMallocManaged(&m_gpu_min_x, sizeof(float) * Parameters::num_particles);
-    cudaMallocManaged(&m_gpu_max_x, sizeof(float) * Parameters::num_particles);
-    cudaMallocManaged(&m_gpu_min_y, sizeof(float) * Parameters::num_particles);
-    cudaMallocManaged(&m_gpu_max_y, sizeof(float) * Parameters::num_particles);
-    
+    m_mass_vec = (float*)(m_mem_vec + (9*bytes_per_vec));
+    m_type_vec = (float*)(m_mem_vec + (10*bytes_per_vec));
+
+    m_cuda_pixel_buf = (unsigned*) (m_mem_vec + (num_vec*bytes_per_vec));
+        
     kernels::init();
 }
 
@@ -47,22 +48,7 @@ GpuParticleEngine3::GpuParticleEngine3()
 
 GpuParticleEngine3::~GpuParticleEngine3()
 {
-    cudaFree(m_x_vec);
-    cudaFree(m_y_vec);
-    cudaFree(m_z_vec);
-    cudaFree(m_vx_vec);
-    cudaFree(m_vy_vec);
-    cudaFree(m_vz_vec);
-    cudaFree(m_ax_vec);
-    cudaFree(m_ay_vec);
-    cudaFree(m_az_vec);
-    cudaFree(m_mass_vec);
-    cudaFree(m_type_vec);
-    cudaFree(m_cuda_pixel_buf);
-    cudaFree(m_gpu_min_x);
-    cudaFree(m_gpu_max_x);
-    cudaFree(m_gpu_min_y);
-    cudaFree(m_gpu_max_y);
+    cudaFree(m_mem_vec);
 }
 
 
@@ -122,20 +108,13 @@ void GpuParticleEngine3::clearPixelBuf(int cnt)
 }
 
 void GpuParticleEngine3::runIteration()
-{
-    m_gpu_min_x[0] = -100;
-    m_gpu_max_x[0] = 100;
-    m_gpu_min_y[0] = -100;
-    m_gpu_max_y[0] = 100;
-    
+{    
     // create runIteration kernel
     kernels::mega_kernel(m_x_vec, m_y_vec, m_z_vec,
                          m_vx_vec, m_vy_vec, m_vz_vec,
                          m_ax_vec, m_ay_vec, m_az_vec,
                          m_mass_vec, m_type_vec,
                          Parameters::num_particles,
-                         m_gpu_min_x[0], m_gpu_max_x[0],
-                         m_gpu_min_y[0], m_gpu_max_y[0],
                          m_cuda_pixel_buf, Parameters::width, Parameters::height);
 }
 
@@ -165,16 +144,13 @@ void GpuParticleEngine3::euler_update()
     cudaDeviceSynchronize();
 }
 
-void GpuParticleEngine3::draw_particles(const float min_x, const float max_x,
-                                        const float min_y, const float max_y)
+void GpuParticleEngine3::draw_particles()
 {
     kernels::draw_particles(m_x_vec, m_y_vec, m_z_vec,
                             m_vx_vec, m_vy_vec, m_vz_vec,
                             m_ax_vec, m_ay_vec, m_az_vec,
                             m_mass_vec, m_type_vec,
                             Parameters::num_particles,
-                            min_x, max_x,
-                            min_y, max_y,
                             m_cuda_pixel_buf,
                             Parameters::width, Parameters::height);
     cudaDeviceSynchronize();
