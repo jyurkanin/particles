@@ -47,7 +47,7 @@ add_executable(
   src/lib/GpuParticleEngine1.cpp
   src/lib/Particle.cpp
   
-  src/kernels/kernels1.cu
+  src/kernels/kernels2.cu
   src/kernels/kernels.h
   
   src/lib/Particle.h  
@@ -76,7 +76,7 @@ target_sources(
   src/lib/Particle.cpp
   src/gui/MainWindow.cpp
   
-  src/kernels/kernels1.cu
+  src/kernels/kernels2.cu
   src/kernels/kernels.h
   
   src/lib/Particle.h  
@@ -92,3 +92,4 @@ target_include_directories(sim PRIVATE ${SDL2_TTF_INCLUDE_DIRS})
 target_link_libraries(sim ${PYTHON_LIBRARIES})
 target_link_libraries(sim ${SDL2_LIBRARIES})
 target_link_libraries(sim ${SDL2_TTF_LIBRARIES})
+

@@ -38,8 +38,9 @@ public:
     void initialize();
     void initialize1();
     void initialize2();
-    
-    void runIteration(int cnt);
+
+    void clearPixelBuf(int cnt);
+    void runIteration();
     void draw(unsigned int *pixbuf);
     std::vector<std::string> getParticleText();
     float getTotalEnergy();

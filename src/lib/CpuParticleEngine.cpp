@@ -96,7 +96,18 @@ void CpuParticleEngine::get_min_max(float &min_x,
     }
 }
 
-void CpuParticleEngine::runIteration(int cnt)
+void CpuParticleEngine::clearPixelBuf(int cnt)
+{
+    if(cnt % 1 == 0)
+    {
+        for(int i = 0; i < (Parameters::width*Parameters::height); i++)
+        {
+            m_pixel_buf[i] = 0;
+        }
+    }    
+}
+
+void CpuParticleEngine::runIteration()
 {
     float max_x = 100;
     float min_x = -100;
@@ -104,14 +115,6 @@ void CpuParticleEngine::runIteration(int cnt)
     float min_y = -100;
 
     get_min_max(min_x, max_x, min_y, max_y);
-
-    if(cnt % 1 == 0)
-    {
-        for(int i = 0; i < (Parameters::width*Parameters::height); i++)
-        {
-            m_pixel_buf[i] = 0;
-        }
-    }
     
     for(int i = 0; i < 10; i++)
     {
@@ -262,7 +265,7 @@ void CpuParticleEngine::draw_particles(const float min_x, const float max_x,
             float z_clamp_blue = fmaxf(-10.0, fminf(10.0, m_particles[i].m_z));
             unsigned z_blue = std::floor(0xFF * 0.9*((z_clamp_blue + 10.0) / 20.0) + 0.1);
             m_pixel_buf[(y*width) + x] = z_blue;
-            //m_pixel_buf[(y*width) + x] |= (0xFF0000*m_particles[i].m_type);
+            m_pixel_buf[(y*width) + x] |= (0xFF0000*m_particles[i].m_type);
         }
     }
 }

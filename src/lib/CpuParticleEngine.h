@@ -17,7 +17,8 @@ public:
     std::array<Particle, Parameters::num_particles> getParticles() { return m_particles; }
 
     void initialize();
-    void runIteration(int cnt);
+    void clearPixelBuf(int cnt);
+    void runIteration();
     void draw(unsigned int *pixbuf);
     std::vector<std::string> getParticleText();
     float getTotalEnergy();

@@ -26,6 +26,7 @@ GpuParticleEngine1::GpuParticleEngine1()
     cudaMallocManaged(&m_gpu_min_y, sizeof(float) * Parameters::num_particles);
     cudaMallocManaged(&m_gpu_max_y, sizeof(float) * Parameters::num_particles);
     
+    kernels::init();
 }
 
 
@@ -123,8 +124,7 @@ void GpuParticleEngine1::get_min_max(float &min_x, float &max_x,
     max_y = m_gpu_max_y[0];
 }
 
-
-void GpuParticleEngine1::runIteration(int cnt)
+void GpuParticleEngine1::clearPixelBuf(int cnt)
 {
     if(cnt % 1 == 0)
     {
@@ -133,7 +133,10 @@ void GpuParticleEngine1::runIteration(int cnt)
             m_cuda_pixel_buf[i] = 0;
         }
     }    
-    
+}
+
+void GpuParticleEngine1::runIteration()
+{    
     // kernels::get_min_max(m_particles,
     //                       Parameters::num_particles,
     //                       m_gpu_min_x, m_gpu_max_x,

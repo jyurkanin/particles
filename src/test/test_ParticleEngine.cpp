@@ -1,6 +1,8 @@
 #include <CpuParticleEngine.h>
 #include <GpuParticleEngine1.h>
 #include <Particle.h>
+#include <iostream>
+#include <chrono>
 
 #include <array>
 #include "gtest/gtest.h"
@@ -23,13 +25,6 @@ TEST(ParticleEngineTest, initialize)
         EXPECT_EQ(cpu_particles[i].m_vx, gpu_particles[i].m_vx);
         EXPECT_EQ(cpu_particles[i].m_vy, gpu_particles[i].m_vy);
     }
-}
-
-TEST(ParticleEngineTest, derp)
-{
-    GpuParticleEngine1  gpu_engine;
-    
-    gpu_engine.initialize();
 }
 
 TEST(ParticleEngineTest, compute_forces)
@@ -117,4 +112,23 @@ TEST(ParticleEngineTest, draw_particles)
     {
         EXPECT_EQ(cpu_pixel_buf[i], gpu_pixel_buf[i]);
     }
+}
+
+TEST(ParticleEngineTest, benchmark)
+{
+    //CpuParticleEngine engine;
+    GpuParticleEngine1 engine;
+    
+    engine.initialize();
+    
+    auto start_time = std::chrono::system_clock::now();
+    
+    for(int i = 0; i < 100; i++)
+    {
+        engine.runIteration();
+    }
+
+    auto end_time = std::chrono::system_clock::now();
+
+    std::cout << "Runtime: " << static_cast<std::chrono::duration<float>>(end_time - start_time).count() << "\n";
 }

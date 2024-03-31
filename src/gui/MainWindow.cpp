@@ -109,7 +109,8 @@ void MainWindow::run(int cnt)
 {
     if(!m_pause)
     {
-        m_engine.runIteration(cnt);
+        m_engine.clearPixelBuf(cnt);
+        m_engine.runIteration();
         m_engine.draw((unsigned int *) m_window_surface->pixels);
     }
     

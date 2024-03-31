@@ -137,7 +137,7 @@ __global__ void cuda_get_xy_vec(const Particle *particles,
 
     
 // TODO: Anti-Aliasing
-__global__ void cuda_draw_particles(const Particle *particles, const int num_particles,
+__global__ void cuda_draw_particles(Particle *particles, const int num_particles,
                                     const float min_x, const float max_x,
                                     const float min_y, const float max_y,
                                     unsigned int *pixelbuf, const int width, const int height)
@@ -212,7 +212,7 @@ void get_min_max(const Particle *particles,
     }
 }
 
-void draw_particles(const Particle *particles, const int num_particles,
+void draw_particles(Particle *particles, const int num_particles,
                     const float min_x, const float max_x,
                     const float min_y, const float max_y,
                     unsigned int *pixelbuf, const int width, const int height)
