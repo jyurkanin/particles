@@ -107,13 +107,16 @@ void mega_kernel(Particle *particles, const int num_particles,
                  const float min_y, const float max_y,
                  unsigned *pixel_buf, const int width, const int height)
 {
+    for(unsigned i = 0; i < Parameters::num_iterations; i++)
+    {
         cuda_mega_kernel<<<Parameters::num_blocks, Parameters::blocksize>>>(particles, output_particles, num_particles,
                                                                             min_x, max_x,
                                                                             min_y, max_y,
                                                                             pixel_buf, width, height);
         cuda_copy_kernel<<<Parameters::num_blocks, Parameters::blocksize>>>(output_particles, particles, num_particles);
+    }
 }
-
+    
     
 void compute_forces(Particle *particles, int num_particles)
 {

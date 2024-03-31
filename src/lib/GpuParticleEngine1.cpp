@@ -152,7 +152,7 @@ void GpuParticleEngine1::runIteration()
                           m_gpu_min_x[0], m_gpu_max_x[0],
                           m_gpu_min_y[0], m_gpu_max_y[0],
                           m_cuda_pixel_buf, Parameters::width, Parameters::height);
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
 }
 
 void GpuParticleEngine1::draw(unsigned int *pixbuf)
