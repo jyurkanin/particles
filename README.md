@@ -23,3 +23,5 @@ between cpu and gpu. So I'm going to move on and accept the error.
 | 2       | 2.05122  | Combined kernels into 1 big one. Removed cudaDeviceSynchronize. |
 | 3       | 1.50391  | Vectorized the shit into struct of float*  instead of Particle* |
 | 3.1     | 1.38789  | Removed Particle* from the engine entirely. |
+| 3.2     | 1.37076  | Malloc everything as one big ass block. |
+| 3.3     | 1.26551  | Added restrict to a bunch of the arguments. |

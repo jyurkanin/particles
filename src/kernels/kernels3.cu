@@ -11,14 +11,14 @@ namespace kernels
 
 
 
-__global__ void cuda_mega_kernel(const float *in_x_vec, const float *in_y_vec, const float *in_z_vec,
-                                 const float *in_vx_vec, const float *in_vy_vec, const float *in_vz_vec,
-                                 const float *in_mass_vec, const float *in_type_vec,
-                                 float *out_x_vec, float *out_y_vec, float *out_z_vec,
-                                 float *out_vx_vec, float *out_vy_vec, float *out_vz_vec,
-                                 float *out_ax_vec, float *out_ay_vec, float *out_az_vec,
+__global__ void cuda_mega_kernel(const float* __restrict__ in_x_vec, const float* __restrict__ in_y_vec, const float* __restrict__ in_z_vec,
+                                 const float* __restrict__ in_vx_vec, const float* __restrict__ in_vy_vec, const float* __restrict__ in_vz_vec,
+                                 const float* __restrict__ in_mass_vec, const float* __restrict__ in_type_vec,
+                                 float* __restrict__ out_x_vec, float* __restrict__ out_y_vec, float* __restrict__ out_z_vec,
+                                 float* __restrict__ out_vx_vec, float* __restrict__ out_vy_vec, float* __restrict__ out_vz_vec,
+                                 float* __restrict__ out_ax_vec, float* __restrict__ out_ay_vec, float* __restrict__ out_az_vec,
 								 const int num_particles,
-								 unsigned *pixel_buf, const int width, const int height)
+								 unsigned* __restrict__ pixel_buf, const int width, const int height)
 {
 	unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned num_threads = gridDim.x * blockDim.x;
@@ -39,8 +39,8 @@ __global__ void cuda_mega_kernel(const float *in_x_vec, const float *in_y_vec, c
 		
 		for(unsigned jj = 0; jj < num_particles; jj++)
 		{
-			if(ii == jj) continue; //pls no divergent branch.
-			
+            //if(ii == jj) continue; // divergent branch. Isn't necessary because of the fmaxf and dx = 0.
+
 			float dx = in_x_vec[jj] - in_x_vec[ii];
 			float dy = in_y_vec[jj] - in_y_vec[ii];
 			float dz = in_z_vec[jj] - in_z_vec[ii];
@@ -79,10 +79,10 @@ __global__ void cuda_mega_kernel(const float *in_x_vec, const float *in_y_vec, c
 	}
 }
 
-__global__ void cuda_copy_old_new(float *in_x_vec, float *in_y_vec, float *in_z_vec,
-                                  float *in_vx_vec, float *in_vy_vec, float *in_vz_vec,
-                                  const float *out_x_vec, const float *out_y_vec, const float *out_z_vec,
-                                  const float *out_vx_vec, const float *out_vy_vec, const float *out_vz_vec,
+__global__ void cuda_copy_old_new(float* __restrict__ in_x_vec, float* __restrict__ in_y_vec, float* __restrict__ in_z_vec,
+                                  float* __restrict__ in_vx_vec, float* __restrict__ in_vy_vec, float* __restrict__ in_vz_vec,
+                                  const float* __restrict__ out_x_vec, const float* __restrict__ out_y_vec, const float* __restrict__ out_z_vec,
+                                  const float* __restrict__ out_vx_vec, const float* __restrict__ out_vy_vec, const float* __restrict__ out_vz_vec,
                                   const unsigned num_particles
                                   )
 {
