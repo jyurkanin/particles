@@ -74,8 +74,6 @@ __global__ void cuda_mega_kernel(const float* __restrict__ in_x_vec, const float
 			float z_clamp_blue = fmaxf(-10.0, fminf(10.0, out_z_vec[ii]));
 			unsigned z_color = floorf(0xFF * 0.9*((z_clamp_blue + 10.0) / 20.0) + 0.1);
             unsigned type_color = (unsigned)(0xFF0000*in_type_vec[ii]);
-
-            
             
 			pixel_buf[(y*width) + x] = z_color | type_color;
 		}
