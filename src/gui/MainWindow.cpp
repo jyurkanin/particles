@@ -154,7 +154,7 @@ void MainWindow::run(int cnt)
 
     SDL_UpdateWindowSurface(m_window);
 
-    usleep(1000);
+    usleep(10);
 }
 
 void MainWindow::loop()

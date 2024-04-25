@@ -25,3 +25,5 @@ between cpu and gpu. So I'm going to move on and accept the error.
 | 3.1     | 1.38789  | Removed Particle* from the engine entirely. |
 | 3.2     | 1.37076  | Malloc everything as one big ass block. |
 | 3.3     | 1.26551  | Added restrict to a bunch of the arguments. |
+| 3.4     | 0.737728 | Computed inverse of dist and stored it. Replaced divides with multiplies. |
+| 3.5     | 0.574305 | Get rid of sqrt. |
