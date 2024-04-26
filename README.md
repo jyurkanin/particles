@@ -27,3 +27,4 @@ between cpu and gpu. So I'm going to move on and accept the error.
 | 3.3     | 1.26551  | Added restrict to a bunch of the arguments. |
 | 3.4     | 0.737728 | Computed inverse of dist and stored it. Replaced divides with multiplies. |
 | 3.5     | 0.574305 | Get rid of sqrt. |
+| 3.6     | 0.389918 | Added optimization flags. |

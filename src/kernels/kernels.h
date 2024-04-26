@@ -9,13 +9,13 @@ void compute_forces(float *x_vec, float *y_vec, float *z_vec,
                     float *vx_vec, float *vy_vec, float *vz_vec,
                     float *ax_vec, float *ay_vec, float *az_vec,
                     float *mass_vec, float *type_vec,
-                    int num_particles);
+                    const int num_particles);
 
 void euler_update(float *x_vec, float *y_vec, float *z_vec,
                   float *vx_vec, float *vy_vec, float *vz_vec,
                   float *ax_vec, float *ay_vec, float *az_vec,
                   float *mass_vec, float *type_vec,
-                  int num_particles);
+                  const int num_particles);
     
 void get_min_max(const Particle *particles,
                  const int num_particles,

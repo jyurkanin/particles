@@ -94,6 +94,7 @@ void GpuParticleEngine3::initialize()
         m_mass_vec[i] = 1.0;
         m_type_vec[i] = 0;
     }
+
 }
 
 void GpuParticleEngine3::clearPixelBuf(int cnt)

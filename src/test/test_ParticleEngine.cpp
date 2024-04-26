@@ -132,3 +132,23 @@ TEST(ParticleEngineTest, benchmark)
 
     std::cout << "Runtime: " << static_cast<std::chrono::duration<float>>(end_time - start_time).count() << "\n";
 }
+
+TEST(ParticleEngineTest, run_once)
+{
+    //CpuParticleEngine engine;
+    GpuParticleEngine3 engine;
+    
+    engine.initialize();
+    
+    auto start_time = std::chrono::system_clock::now();
+    
+    for(int i = 0; i < 1; i++)
+    {
+        engine.runIteration();
+    }
+    cudaDeviceSynchronize();
+
+    auto end_time = std::chrono::system_clock::now();
+
+    std::cout << "Runtime: " << static_cast<std::chrono::duration<float>>(end_time - start_time).count() << "\n";
+}

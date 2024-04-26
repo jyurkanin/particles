@@ -47,7 +47,7 @@ add_executable(
   src/lib/GpuParticleEngine3.cpp
   src/lib/Particle.cpp
   
-  src/kernels/kernels4.cu
+  src/kernels/kernels5.cu
   src/kernels/kernels.h
   
   src/lib/Particle.h  
@@ -57,7 +57,11 @@ add_executable(
 )
 
 set_target_properties(test_all PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
+target_compile_options(test_all PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+                       --generate-line-info
+                       --use_fast_math
+                       --relocatable-device-code=true
+                       >)
 target_include_directories(test_all PRIVATE ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(test_all ${PYTHON_LIBRARIES})
 target_link_libraries(test_all GTest::gtest_main)
@@ -76,7 +80,7 @@ target_sources(
   src/lib/Particle.cpp
   src/gui/MainWindow.cpp
   
-  src/kernels/kernels4.cu
+  src/kernels/kernels5.cu
   src/kernels/kernels.h
   
   src/lib/Particle.h  
