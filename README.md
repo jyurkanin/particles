@@ -14,6 +14,26 @@ Seems to be some kind of unknowable floating point error.
 And I don't care enough to figure out the floating point differences
 between cpu and gpu. So I'm going to move on and accept the error.
 
+# Ideas for going even more faster
+Tile it. To fit in the shared memory. Create a new kernel.
+So a warp is 32 threads.
+Lets say a block is 64 threads.
+Grid will be a 2d array of blocks.
+
+The first 64 particle positions will be stored in shared memory.
+Then each block will compute the interactions between the
+first 0-63 particles.
+The result will be the incomplete forces on the first 64 particles.
+Results will be reduced along the gridDim.x direction to get the complete forces
+acting on the first 64 particles.
+Results will for the next 64 particles will be computed by moving along the gridDim.y
+direction.
+
+# Experiment with a grid level sync?
+GPU is not meant to do this, the internet says this will be shit.
+I still want to try though.
+
+
 # Benchmark
 100 calls to runIteration()
 
@@ -28,3 +48,5 @@ between cpu and gpu. So I'm going to move on and accept the error.
 | 3.4     | 0.737728 | Computed inverse of dist and stored it. Replaced divides with multiplies. |
 | 3.5     | 0.574305 | Get rid of sqrt. |
 | 3.6     | 0.389918 | Added optimization flags. |
+
+
