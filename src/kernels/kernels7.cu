@@ -1,6 +1,8 @@
 #include "kernels.h"
 #include "Parameters.h"
 
+#include <cooperative_groups.h>
+
 #include <cassert>
 #include <algorithm>
 #include <iomanip>
@@ -13,9 +15,10 @@ namespace kernels
 
 __global__ void cuda_mega_kernel(float* __restrict__ in_x_vec, float* __restrict__ in_y_vec, float* __restrict__ in_z_vec,
                                  float* __restrict__ in_vx_vec, float* __restrict__ in_vy_vec, float* __restrict__ in_vz_vec,
+                                 float* __restrict__ out_ax_vec, float* __restrict__ out_ay_vec, float* __restrict__ out_az_vec,
                                  const float* __restrict__ in_mass_vec, const float* __restrict__ in_type_vec,
-								 const int num_particles,
-								 unsigned* __restrict__ pixel_buf, const int width, const int height)
+								 const int *num_particles,
+								 unsigned* __restrict__ pixel_buf, const int* width, const int* height)
 {
 	unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned num_threads = gridDim.x * blockDim.x;
@@ -26,21 +29,23 @@ __global__ void cuda_mega_kernel(float* __restrict__ in_x_vec, float* __restrict
     const float min_y = -100;
     const float max_y = 100;
 
-    const float width_max_min_x_inv = width / (max_x - min_x);
-    const float height_max_min_y_inv = height / (max_y - min_y);
-	
+    const float width_max_min_x_inv = *width / (max_x - min_x);
+    const float height_max_min_y_inv = *height / (max_y - min_y);
+
+    cooperative_groups::grid_group g = cooperative_groups::this_grid();
+    
 	// compute accelerations
-	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
-	{
-        for(unsigned kk = 0; kk < Parameters::num_iterations; kk++)
-        {        
+    for(unsigned kk = 0; kk < Parameters::num_iterations; kk++)
+    {
+        for(unsigned ii = idx; ii < *num_particles; ii += num_threads)
+        {
             const float inv_mass = 1.0 / in_mass_vec[ii];
             const float damp = 1e-2;
             float ax = -damp*in_x_vec[ii] * inv_mass;
             float ay = -damp*in_y_vec[ii] * inv_mass;
             float az = -damp*in_z_vec[ii] * inv_mass;
         
-            for(unsigned jj = 0; jj < num_particles; jj++)
+            for(unsigned jj = 0; jj < *num_particles; jj++)
             {
                 float dx = in_x_vec[jj] - in_x_vec[ii];
                 float dy = in_y_vec[jj] - in_y_vec[ii];
@@ -52,13 +57,21 @@ __global__ void cuda_mega_kernel(float* __restrict__ in_x_vec, float* __restrict
                 az += force_temp * dz;            
             }
 
-            // Todo: Insert global lock here!
-            
+            out_ax_vec[ii] = ax;
+            out_ay_vec[ii] = ay;
+            out_az_vec[ii] = az;
+        }
+        
+        // Global lock! Lol! Lmao even!
+        g.sync();
+        
+        for(unsigned ii = idx; ii < *num_particles; ii += num_threads)
+        {
             
             // Euler update        
-            in_vx_vec[ii] = in_vx_vec[ii] + (ax*scalar);
-            in_vy_vec[ii] = in_vy_vec[ii] + (ay*scalar);
-            in_vz_vec[ii] = in_vz_vec[ii] + (az*scalar);
+            in_vx_vec[ii] = in_vx_vec[ii] + (out_ax_vec[ii]*scalar);
+            in_vy_vec[ii] = in_vy_vec[ii] + (out_ay_vec[ii]*scalar);
+            in_vz_vec[ii] = in_vz_vec[ii] + (out_az_vec[ii]*scalar);
 
             in_x_vec[ii] = in_x_vec[ii] + (in_vx_vec[ii]*scalar);
             in_y_vec[ii] = in_y_vec[ii] + (in_vy_vec[ii]*scalar);
@@ -68,13 +81,13 @@ __global__ void cuda_mega_kernel(float* __restrict__ in_x_vec, float* __restrict
             int x = (int)((in_x_vec[ii] - min_x) * width_max_min_x_inv);
             int y = (int)((in_y_vec[ii] - min_y) * height_max_min_y_inv);
 		
-            if((x >= 0) && (x < width) && (y >= 0) && (y < height))
+            if((x >= 0) && (x < *width) && (y >= 0) && (y < *height))
             {
                 float z_clamp_blue = fmaxf(-10.0, fminf(10.0, in_z_vec[ii]));
                 unsigned z_color = floorf(0xFF * 0.9 * (0.05 * (z_clamp_blue + 10.0)) + 0.1);
                 unsigned type_color = (unsigned)(0xFF0000*in_type_vec[ii]);
             
-                pixel_buf[(y*width) + x] = z_color | type_color;
+                pixel_buf[(y*(*width)) + x] = z_color | type_color;
             }
         }
 	}
@@ -89,7 +102,11 @@ float *out_vz_vec;
 float *out_ax_vec;
 float *out_ay_vec;
 float *out_az_vec;
-	
+
+int *g_width;
+int *g_height;
+int *g_num_particles;
+    
 void init()
 {
 	cudaMalloc(&out_x_vec, Parameters::num_particles * sizeof(float));
@@ -101,24 +118,35 @@ void init()
 	cudaMalloc(&out_ax_vec, Parameters::num_particles * sizeof(float));
     cudaMalloc(&out_ay_vec, Parameters::num_particles * sizeof(float));
     cudaMalloc(&out_az_vec, Parameters::num_particles * sizeof(float));
+
+    cudaMalloc(&g_width, sizeof(int));
+    cudaMalloc(&g_height, sizeof(int));
+    cudaMalloc(&g_num_particles, sizeof(int));
+
+    assert((Parameters::blocksize*Parameters::num_blocks) < Parameters::num_particles);
 }
 
 void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
                  float *vx_vec, float *vy_vec, float *vz_vec,
                  float *ax_vec, float *ay_vec, float *az_vec,
                  float *mass_vec, float *type_vec,
-                 const int num_particles,
-				 unsigned *pixel_buf, const int width, const int height)
+                 int num_particles,
+				 unsigned *pixel_buf, int width, int height)
 {
-	for(unsigned i = 0; i < Parameters::num_iterations; i++)
-	{
-		cuda_mega_kernel<<<Parameters::num_blocks, Parameters::blocksize>>>
-            (x_vec,   y_vec,   z_vec,
-             vx_vec,  vy_vec,  vz_vec,
-             mass_vec, type_vec,
-             num_particles,
-             pixel_buf, width, height);
-	}
+    cudaMemcpy(g_num_particles, &num_particles, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(g_width, &width, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(g_height, &height, sizeof(int), cudaMemcpyHostToDevice);
+    
+    void *kernel_args[] = {
+        &x_vec, &y_vec, &z_vec,
+        &vx_vec, &vy_vec, &vz_vec,
+        &out_ax_vec, &out_ay_vec, &out_az_vec,
+        &mass_vec, &type_vec,
+        &g_num_particles,
+        &pixel_buf, &g_width, &g_height
+    };
+    cudaLaunchCooperativeKernel((void*)cuda_mega_kernel, Parameters::num_blocks, Parameters::blocksize,
+                                kernel_args);
 }
 	
 	
@@ -259,8 +287,6 @@ void get_min_max(const Particle *particles,
 {
 	assert(num_particles <= (Parameters::num_blocks*Parameters::blocksize));
 	
-	// Use min_x and min_y as temporary variables
-	cuda_get_xy_vec<<<Parameters::num_blocks, Parameters::blocksize>>>(particles, num_particles, min_x, min_y);
 	
 	cuda_get_min_max<<<Parameters::num_blocks, Parameters::blocksize, Parameters::blocksize*4>>>
 		(num_particles,

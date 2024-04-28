@@ -33,8 +33,8 @@ void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
                  float *vx_vec, float *vy_vec, float *vz_vec,
                  float *ax_vec, float *ay_vec, float *az_vec,
                  float *mass_vec, float *type_vec,
-                 const int num_particles,
-				 unsigned *pixel_buf, const int width, const int height);
+                 int num_particles,
+				 unsigned *pixel_buf, int width, int height);
     
 void init();
 }

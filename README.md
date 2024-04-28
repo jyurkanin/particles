@@ -34,6 +34,9 @@ GPU is not meant to do this, the internet says this will be shit.
 I still want to try though.
 
   * Using one block with blockDim.x = num_particles and __syncthreads()
+	Result: Can't launch blocks bigger with more than 1024 threads.
+		    Did run really fast though.
+  * 
 
 # Benchmark
 100 calls to runIteration()

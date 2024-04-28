@@ -126,7 +126,7 @@ TEST(ParticleEngineTest, benchmark)
     {
         engine.runIteration();
     }
-    // cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
 
     auto end_time = std::chrono::system_clock::now();
 
