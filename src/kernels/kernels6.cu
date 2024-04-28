@@ -125,9 +125,10 @@ __global__ void cuda_sum_along_blocks(const float* __restrict__ big_ax_vec, cons
     
 __global__ void cuda_elementwise2(const float* __restrict__ in_x_vec, const float* __restrict__ in_y_vec, const float* __restrict__ in_z_vec,
                                   const float* __restrict__ in_vx_vec, const float* __restrict__ in_vy_vec, const float* __restrict__ in_vz_vec,
-                                  const float* __restrict__ in_ax_vec, const float* __restrict__ in_ay_vec, const float* __restrict__ in_az_vec,
+                                  const float* __restrict__ big_ax_vec, const float* __restrict__ big_ay_vec, const float* __restrict__ big_az_vec,
                                   float* __restrict__ out_x_vec, float* __restrict__ out_y_vec, float* __restrict__ out_z_vec,
                                   float* __restrict__ out_vx_vec, float* __restrict__ out_vy_vec, float* __restrict__ out_vz_vec,
+                                  const float* __restrict__ in_mass_vec,
                                   const float* __restrict__ in_type_vec,
                                   const int num_particles,
                                   unsigned* __restrict__ pixel_buf, const int width, const int height)
@@ -146,11 +147,30 @@ __global__ void cuda_elementwise2(const float* __restrict__ in_x_vec, const floa
     
 	// compute accelerations
 	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
-	{		
+	{
+        // Compute damping
+        const float damp_inv_mass = (1e-2 / in_mass_vec[ii]);
+        float ax = -damp_inv_mass * in_vx_vec[ii];
+        float ay = -damp_inv_mass * in_vy_vec[ii];
+        float az = -damp_inv_mass * in_vz_vec[ii];
+
+        // Sum along the block dimension for the big_vec's
+        unsigned big_idx = ii;
+        for(unsigned jj = 0; jj < g_grid_dim; jj++)
+        {
+            ax += big_ax_vec[big_idx];
+            ay += big_ay_vec[big_idx];
+            az += big_az_vec[big_idx];
+            
+            big_idx += num_particles;
+        }
+        
+
+        
 		// Euler update        
-        out_vx_vec[ii] = in_vx_vec[ii] + (in_ax_vec[ii]*scalar);
-        out_vy_vec[ii] = in_vy_vec[ii] + (in_ay_vec[ii]*scalar);
-        out_vz_vec[ii] = in_vz_vec[ii] + (in_az_vec[ii]*scalar);
+        out_vx_vec[ii] = in_vx_vec[ii] + (ax*scalar);
+        out_vy_vec[ii] = in_vy_vec[ii] + (ay*scalar);
+        out_vz_vec[ii] = in_vz_vec[ii] + (az*scalar);
         
         out_x_vec[ii] = in_x_vec[ii] + (out_vx_vec[ii]*scalar);
         out_y_vec[ii] = in_y_vec[ii] + (out_vy_vec[ii]*scalar);
@@ -163,10 +183,11 @@ __global__ void cuda_elementwise2(const float* __restrict__ in_x_vec, const floa
 		if((x >= 0) && (x < width) && (y >= 0) && (y < height))
 		{
 			float z_clamp_blue = fmaxf(-10.0, fminf(10.0, out_z_vec[ii]));
-			unsigned z_color = floorf(0xFF * 0.9 * (0.05 * (z_clamp_blue + 10.0)) + 0.1);
+			unsigned z_color = floorf(0xFF * ((0.4 * 0.05 * (z_clamp_blue + 10.0)) + 0.6));
             unsigned type_color = (unsigned)(0xFF0000*in_type_vec[ii]);
             
-			pixel_buf[(y*width) + x] = z_color | type_color;
+			// pixel_buf[(y*width) + x] = z_color | type_color;
+            pixel_buf[(y*width) + x] = (z_color * (in_type_vec[ii] == 0)) + (type_color * (in_type_vec[ii] == 1));
 		}
 	}
 }
@@ -224,8 +245,11 @@ void init()
 
     unsigned num_bytes_needed_for_shared_mem = Parameters::blocksize * sizeof(float) * 4;
     assert(num_bytes_needed_for_shared_mem <= (4096*1024));
+
+    printf("Grid dim: %d\n", g_host_grid_dim);
+    printf("Num bytes needed for shared mem: %d\n", num_bytes_needed_for_shared_mem);
     
-    cudaMallocManaged(&temp_big_ax_vec, Parameters::num_particles * g_host_grid_dim * sizeof(float));
+    cudaMalloc(&temp_big_ax_vec, Parameters::num_particles * g_host_grid_dim * sizeof(float));
     cudaMalloc(&temp_big_ay_vec, Parameters::num_particles * g_host_grid_dim * sizeof(float));
     cudaMalloc(&temp_big_az_vec, Parameters::num_particles * g_host_grid_dim * sizeof(float));
 
@@ -251,21 +275,13 @@ void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
              temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec,
              num_particles);
         
-        cuda_sum_along_blocks<<<Parameters::num_blocks, Parameters::blocksize>>>
-            (temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec,
-             vx_vec, vy_vec, vz_vec,
-             mass_vec,
-             ax_vec, ay_vec, az_vec,
-             num_particles);
-
-        cudaDeviceSynchronize();
-        
         cuda_elementwise2<<<Parameters::num_blocks, Parameters::blocksize>>>
             (x_vec, y_vec, z_vec,
              vx_vec, vy_vec, vz_vec,
-             ax_vec, ay_vec, az_vec,
+             temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec,
              out_x_vec,  out_y_vec,  out_z_vec,
              out_vx_vec, out_vy_vec, out_vz_vec,
+             mass_vec,
              type_vec,
              num_particles,
              pixel_buf, width, height);
