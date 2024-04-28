@@ -9,37 +9,23 @@
 namespace kernels
 {
 
-__global__ void cuda_damping(const float* __restrict__ in_vx_vec, const float* __restrict__ in_vy_vec, const float* __restrict__ in_vz_vec,
-                             const float* __restrict__ in_mass_vec,
-                             float* __restrict__ out_ax_vec, float* __restrict__ out_ay_vec, float* __restrict__ out_az_vec,
-                             const int num_particles)
-{
-    unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
-	unsigned num_threads = gridDim.x * blockDim.x;
+__constant__ unsigned g_grid_dim;
+unsigned g_host_grid_dim;
 
-    if(idx < num_particles)
-    {
-        const float inv_mass = in_mass_vec[idx];
-        const float damp_inv_mass = (1e-2 / inv_mass);
-        out_ax_vec[idx] = -damp_inv_mass * in_vx_vec[idx];
-        out_ay_vec[idx] = -damp_inv_mass * in_vy_vec[idx];
-        out_az_vec[idx] = -damp_inv_mass * in_vz_vec[idx];
-    }
-}
     
-
 // out_big_ax_vec has shape [gridDim.y, num_particles] 
 __global__ void cuda_tiled_forces(const float* __restrict__ in_x_vec, const float* __restrict__ in_y_vec, const float* __restrict__ in_z_vec,
                                   const float* __restrict__ in_vx_vec, const float* __restrict__ in_vy_vec, const float* __restrict__ in_vz_vec,
-                                  const float* __restrict__ in_ax_vec, const float* __restrict__ in_ay_vec, const float* __restrict__ in_az_vec,
                                   const float* __restrict__ in_mass_vec,
                                   float* __restrict__ out_big_ax_vec, float* __restrict__ out_big_ay_vec, float* __restrict__ out_big_az_vec,
                                   const int num_particles)
-{    
-    __shared__ float x_slice_other[blockDim.x];
-    __shared__ float y_slice_other[blockDim.x];
-    __shared__ float z_slice_other[blockDim.x];
-    __shared__ float mass_slice_other[blockDim.x];
+{
+    extern __shared__ float mem[];
+    
+    float *x_slice_other = &mem[0*blockDim.x];
+    float *y_slice_other = &mem[1*blockDim.x];
+    float *z_slice_other = &mem[2*blockDim.x];
+    float *mass_slice_other = &mem[3*blockDim.x];
     
 	unsigned num_threads = gridDim.x * gridDim.y * blockDim.x;
     unsigned idx = threadIdx.x + (blockIdx.x * blockDim.x);
@@ -48,26 +34,30 @@ __global__ void cuda_tiled_forces(const float* __restrict__ in_x_vec, const floa
     // This will be true because both gridDim.x and gridDim.y
     // will be computed to be the minimize size necessary such that, gridDim.x * blockDim.x
 
+    float x_for_idx;
+    float y_for_idx;
+    float z_for_idx;
+    
     if(idx < num_particles)
     {    
-        float x_for_idx = in_x_vec[idx];
-        float y_for_idx = in_y_vec[idx];
-        float z_for_idx = in_z_vec[idx];
-
-        if(idx_other < num_particles)
-        {
-            x_slice_other[threadIdx.x] = in_x_vec[idx_other];
-            y_slice_other[threadIdx.x] = in_y_vec[idx_other];
-            z_slice_other[threadIdx.x] = in_z_vec[idx_other];
-            mass_slice_other[threadIdx.x] = in_mass_vec[idx_other];   
-        }
-        else
-        {
-            x_slice_other[threadIdx.x] = x_for_idx; // This results in zero force and no effect on the rest of the program.
-            y_slice_other[threadIdx.x] = y_for_idx;
-            z_slice_other[threadIdx.x] = z_for_idx;
-            mass_slice_other[threadIdx.x] = 1.0; // Arbitrary
-        }
+        x_for_idx = in_x_vec[idx];
+        y_for_idx = in_y_vec[idx];
+        z_for_idx = in_z_vec[idx];
+    }
+    
+    if(idx_other < num_particles)
+    {
+        x_slice_other[threadIdx.x] = in_x_vec[idx_other];
+        y_slice_other[threadIdx.x] = in_y_vec[idx_other];
+        z_slice_other[threadIdx.x] = in_z_vec[idx_other];
+        mass_slice_other[threadIdx.x] = in_mass_vec[idx_other];   
+    }
+    else
+    {
+        x_slice_other[threadIdx.x] = 1.0;
+        y_slice_other[threadIdx.x] = 1.0;
+        z_slice_other[threadIdx.x] = 1.0;
+        mass_slice_other[threadIdx.x] = 0.0;  // This results in zero force and no effect on the rest of the program.
     }
     
     __syncthreads(); // Guarantees all shared memory will be loaded.
@@ -75,60 +65,69 @@ __global__ void cuda_tiled_forces(const float* __restrict__ in_x_vec, const floa
     
     if(idx < num_particles)    
     {
+        float ax = 0.0;
+        float ay = 0.0;
+        float az = 0.0;
         for(unsigned ii = 0; ii < blockDim.x; ii++)
         {
-            float dx = x_for_idx - x_slice_other[ii];
-            float dy = y_for_idx - y_slice_other[ii];
-            float dz = z_for_idx - z_slice_other[ii];
+            float dx = x_slice_other[ii] - x_for_idx;
+            float dy = y_slice_other[ii] - y_for_idx;
+            float dz = z_slice_other[ii] - z_for_idx;
             float force_temp = mass_slice_other[ii] / fmaxf(1e-6, dx*dx + dy*dy + dz*dz);
             ax += (force_temp * dx);
             ay += (force_temp * dy);
             az += (force_temp * dz);
         }
-    
+        
         // Collect all the grid results for reduction later.
         // when out_big_ax has shape [gridDim.y, num_particles] then it has coalesced memory access. (Good)
         const unsigned particle_and_grid_idx = (blockIdx.y * num_particles) + idx;
         out_big_ax_vec[particle_and_grid_idx] = ax;
         out_big_ay_vec[particle_and_grid_idx] = ay;
         out_big_az_vec[particle_and_grid_idx] = az;
+        
+        // printf("theadIdx.x: %d    particle_grid_idx: %d   ax: %f\n", threadIdx.x, particle_and_grid_idx, out_big_ax_vec[particle_and_grid_idx]);
     }
 }
 
-__global__ void cuda_gay()
+__global__ void cuda_sum_along_blocks(const float* __restrict__ big_ax_vec, const float* __restrict__ big_ay_vec, const float* __restrict__ big_az_vec,
+                                      const float* __restrict__ in_vx_vec, const float* __restrict__ in_vy_vec, const float* __restrict__ in_vz_vec,
+                                      const float* __restrict__ in_mass_vec,
+                                      float* __restrict__ out_ax_vec, float* __restrict__ out_ay_vec, float* __restrict__ out_az_vec,
+                                      const unsigned num_particles)
 {
+	unsigned idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+	unsigned num_threads = gridDim.x * blockDim.x;
+    
 	// compute accelerations
 	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
 	{
-        const float inv_mass = 1.0 / in_mass_vec[ii];
-		const float damp = 1e-2;
-		float ax = -damp*in_x_vec[ii] * inv_mass;
-		float ay = -damp*in_y_vec[ii] * inv_mass;
-		float az = -damp*in_z_vec[ii] * inv_mass;
+        const float damp_inv_mass = (1e-2 / in_mass_vec[ii]);
+        float ax = -damp_inv_mass * in_vx_vec[ii];
+        float ay = -damp_inv_mass * in_vy_vec[ii];
+        float az = -damp_inv_mass * in_vz_vec[ii];
         
-		for(unsigned jj = 0; jj < num_particles; jj++)
-		{
-			float dx = in_x_vec[jj] - in_x_vec[ii];
-			float dy = in_y_vec[jj] - in_y_vec[ii];
-			float dz = in_z_vec[jj] - in_z_vec[ii];
-            float force_temp = in_mass_vec[jj] / fmaxf(1e-6, dx*dx + dy*dy + dz*dz);
+        unsigned big_idx = ii;
+        for(unsigned jj = 0; jj < g_grid_dim; jj++)
+        {
+            ax += big_ax_vec[big_idx];
+            ay += big_ay_vec[big_idx];
+            az += big_az_vec[big_idx];
             
-            ax += force_temp * dx;
-            ay += force_temp * dy;
-            az += force_temp * dz;            
-		}
+            big_idx += num_particles;
+        }
         
         out_ax_vec[ii] = ax;
         out_ay_vec[ii] = ay;
         out_az_vec[ii] = az;
     }
 }
-
+    
 __global__ void cuda_elementwise2(const float* __restrict__ in_x_vec, const float* __restrict__ in_y_vec, const float* __restrict__ in_z_vec,
                                   const float* __restrict__ in_vx_vec, const float* __restrict__ in_vy_vec, const float* __restrict__ in_vz_vec,
+                                  const float* __restrict__ in_ax_vec, const float* __restrict__ in_ay_vec, const float* __restrict__ in_az_vec,
                                   float* __restrict__ out_x_vec, float* __restrict__ out_y_vec, float* __restrict__ out_z_vec,
                                   float* __restrict__ out_vx_vec, float* __restrict__ out_vy_vec, float* __restrict__ out_vz_vec,
-                                  const float* __restrict__ out_ax_vec, const float* __restrict__ out_ay_vec, const float* __restrict__ out_az_vec,
                                   const float* __restrict__ in_type_vec,
                                   const int num_particles,
                                   unsigned* __restrict__ pixel_buf, const int width, const int height)
@@ -141,7 +140,7 @@ __global__ void cuda_elementwise2(const float* __restrict__ in_x_vec, const floa
     
     const float width_max_min_x_inv = width / (max_x - min_x);
     const float height_max_min_y_inv = height / (max_y - min_y);
-
+    
 	unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned num_threads = gridDim.x * blockDim.x;
     
@@ -149,14 +148,14 @@ __global__ void cuda_elementwise2(const float* __restrict__ in_x_vec, const floa
 	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
 	{		
 		// Euler update        
-        out_vx_vec[ii] = in_vx_vec[ii] + (out_ax_vec[ii]*scalar);
-        out_vy_vec[ii] = in_vy_vec[ii] + (out_ay_vec[ii]*scalar);
-        out_vz_vec[ii] = in_vz_vec[ii] + (out_az_vec[ii]*scalar);
-
+        out_vx_vec[ii] = in_vx_vec[ii] + (in_ax_vec[ii]*scalar);
+        out_vy_vec[ii] = in_vy_vec[ii] + (in_ay_vec[ii]*scalar);
+        out_vz_vec[ii] = in_vz_vec[ii] + (in_az_vec[ii]*scalar);
+        
         out_x_vec[ii] = in_x_vec[ii] + (out_vx_vec[ii]*scalar);
         out_y_vec[ii] = in_y_vec[ii] + (out_vy_vec[ii]*scalar);
         out_z_vec[ii] = in_z_vec[ii] + (out_vz_vec[ii]*scalar);        
-
+        
 		// Draw
 		int x = (int)((out_x_vec[ii] - min_x) * width_max_min_x_inv);
 		int y = (int)((out_y_vec[ii] - min_y) * height_max_min_y_inv);
@@ -207,8 +206,6 @@ float *out_az_vec;
 float *temp_big_ax_vec;
 float *temp_big_ay_vec;
 float *temp_big_az_vec;
-    
-unsigned g_grid_dim;
 
 void init()
 {
@@ -218,18 +215,21 @@ void init()
 	cudaMalloc(&out_vx_vec, Parameters::num_particles * sizeof(float));
     cudaMalloc(&out_vy_vec, Parameters::num_particles * sizeof(float));
     cudaMalloc(&out_vz_vec, Parameters::num_particles * sizeof(float));
+    
 	cudaMalloc(&out_ax_vec, Parameters::num_particles * sizeof(float));
     cudaMalloc(&out_ay_vec, Parameters::num_particles * sizeof(float));
     cudaMalloc(&out_az_vec, Parameters::num_particles * sizeof(float));
 
-    g_grid_dim = 1 + (Parameters::num_particles / Parameters::blocksize);
+    g_host_grid_dim = 1 + (Parameters::num_particles / Parameters::blocksize);
 
     unsigned num_bytes_needed_for_shared_mem = Parameters::blocksize * sizeof(float) * 4;
     assert(num_bytes_needed_for_shared_mem <= (4096*1024));
     
-    cudaMalloc(&temp_big_ax_vec, Parameters::num_particles * g_grid_dim * sizeof(float));
-    cudaMalloc(&temp_big_ay_vec, Parameters::num_particles * g_grid_dim * sizeof(float));
-    cudaMalloc(&temp_big_az_vec, Parameters::num_particles * g_grid_dim * sizeof(float));
+    cudaMallocManaged(&temp_big_ax_vec, Parameters::num_particles * g_host_grid_dim * sizeof(float));
+    cudaMalloc(&temp_big_ay_vec, Parameters::num_particles * g_host_grid_dim * sizeof(float));
+    cudaMalloc(&temp_big_az_vec, Parameters::num_particles * g_host_grid_dim * sizeof(float));
+
+    cudaMemcpyToSymbol(g_grid_dim, &g_host_grid_dim, sizeof(unsigned));
 }
 
 void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
@@ -241,30 +241,31 @@ void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
 {
 	for(unsigned i = 0; i < Parameters::num_iterations; i++)
 	{
-        cuda_damping<<<Parameters::num_blocks, Parameters::blocksize>>>
-            (vx_vec, vy_vec, vz_vec,
+        const unsigned num_shared_arrays = 4;
+        const unsigned shared_mem_size = num_shared_arrays * Parameters::blocksize * sizeof(float);
+        
+		cuda_tiled_forces<<<dim3(g_host_grid_dim, g_host_grid_dim), dim3(Parameters::blocksize), shared_mem_size>>>
+            (x_vec, y_vec, z_vec,
+             vx_vec, vy_vec, vz_vec,
+             mass_vec,
+             temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec,
+             num_particles);
+        
+        cuda_sum_along_blocks<<<Parameters::num_blocks, Parameters::blocksize>>>
+            (temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec,
+             vx_vec, vy_vec, vz_vec,
              mass_vec,
              ax_vec, ay_vec, az_vec,
              num_particles);
-        
-		cuda_tiled_forces<<<Parameters::num_blocks, Parameters::blocksize>>>
-    (x_vec, y_vec, z_vec,
-            vx_vec, vy_vec, vz_vec,
-            ax_vec, ay_vec, az_vec,
-            mass_vec,
-            temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec,
-            num_particles);
 
-    cuda_sum_along_blocks<<<Parameters::num_blocks, Parameters::blocksize>>>
-        (ax_vec, ay_vec, az_vec,
-            temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec, num_particles);
-    
-    cuda_elementwise2<<<Parameters::num_blocks, Parameters::blocksize>>>
-        (x_vec, y_vec, z_vec,
+        cudaDeviceSynchronize();
+        
+        cuda_elementwise2<<<Parameters::num_blocks, Parameters::blocksize>>>
+            (x_vec, y_vec, z_vec,
              vx_vec, vy_vec, vz_vec,
+             ax_vec, ay_vec, az_vec,
              out_x_vec,  out_y_vec,  out_z_vec,
              out_vx_vec, out_vy_vec, out_vz_vec,
-             out_ax_vec, out_ay_vec, out_az_vec,
              type_vec,
              num_particles,
              pixel_buf, width, height);
@@ -275,7 +276,6 @@ void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
              out_x_vec, out_y_vec, out_z_vec,
              out_vx_vec, out_vy_vec, out_vz_vec,
              num_particles);
-
 	}
 }
 	

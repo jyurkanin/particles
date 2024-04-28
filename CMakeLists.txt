@@ -90,6 +90,14 @@ target_sources(
   src/Parameters.h
 )
 
+set_target_properties(sim PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_compile_options(sim PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+                       --generate-line-info
+                       --use_fast_math
+                       --relocatable-device-code=true
+		       -g
+		       -G
+                       >)
 target_include_directories(sim PRIVATE ${PYTHON_INCLUDE_DIRS})
 target_include_directories(sim PRIVATE ${SDL2_INCLUDE_DIRS})
 target_include_directories(sim PRIVATE ${SDL2_TTF_INCLUDE_DIRS})
