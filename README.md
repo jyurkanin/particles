@@ -36,7 +36,8 @@ I still want to try though.
   * Using one block with blockDim.x = num_particles and __syncthreads()
 	Result: Can't launch blocks bigger with more than 1024 threads.
 		    Did run really fast though.
-  * 
+  * Using grid.sync()
+	Meh. Slow.
 
 # Benchmark
 100 calls to runIteration()
@@ -54,4 +55,4 @@ I still want to try though.
 | 3.6     | 0.389918 | Added optimization flags. |
 | 6       | 0.322963 | Tiled the computation. Lol. |
 | 6.1     | 0.24089  | Deleted the stupid copy kernel. |
-
+| 7       | 1.72301  | Synchronize the entire grid. Slow. |
