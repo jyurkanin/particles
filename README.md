@@ -48,5 +48,6 @@ I still want to try though.
 | 3.4     | 0.737728 | Computed inverse of dist and stored it. Replaced divides with multiplies. |
 | 3.5     | 0.574305 | Get rid of sqrt. |
 | 3.6     | 0.389918 | Added optimization flags. |
-| 6       | 0.322963  | Tiled the computation. Lol! |
+| 6       | 0.322963 | Tiled the computation. Lol. |
+| 6.1     | 0.24089  | Deleted the stupid copy kernel. |
 

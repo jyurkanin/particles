@@ -123,11 +123,9 @@ __global__ void cuda_sum_along_blocks(const float* __restrict__ big_ax_vec, cons
     }
 }
     
-__global__ void cuda_elementwise2(const float* __restrict__ in_x_vec, const float* __restrict__ in_y_vec, const float* __restrict__ in_z_vec,
-                                  const float* __restrict__ in_vx_vec, const float* __restrict__ in_vy_vec, const float* __restrict__ in_vz_vec,
+__global__ void cuda_elementwise2(float* __restrict__ in_x_vec, float* __restrict__ in_y_vec, float* __restrict__ in_z_vec,
+                                  float* __restrict__ in_vx_vec, float* __restrict__ in_vy_vec, float* __restrict__ in_vz_vec,
                                   const float* __restrict__ big_ax_vec, const float* __restrict__ big_ay_vec, const float* __restrict__ big_az_vec,
-                                  float* __restrict__ out_x_vec, float* __restrict__ out_y_vec, float* __restrict__ out_z_vec,
-                                  float* __restrict__ out_vx_vec, float* __restrict__ out_vy_vec, float* __restrict__ out_vz_vec,
                                   const float* __restrict__ in_mass_vec,
                                   const float* __restrict__ in_type_vec,
                                   const int num_particles,
@@ -165,24 +163,24 @@ __global__ void cuda_elementwise2(const float* __restrict__ in_x_vec, const floa
             big_idx += num_particles;
         }
         
-
         
-		// Euler update        
-        out_vx_vec[ii] = in_vx_vec[ii] + (ax*scalar);
-        out_vy_vec[ii] = in_vy_vec[ii] + (ay*scalar);
-        out_vz_vec[ii] = in_vz_vec[ii] + (az*scalar);
         
-        out_x_vec[ii] = in_x_vec[ii] + (out_vx_vec[ii]*scalar);
-        out_y_vec[ii] = in_y_vec[ii] + (out_vy_vec[ii]*scalar);
-        out_z_vec[ii] = in_z_vec[ii] + (out_vz_vec[ii]*scalar);        
+		// Euler update
+        in_vx_vec[ii] = in_vx_vec[ii] + (ax*scalar);
+        in_vy_vec[ii] = in_vy_vec[ii] + (ay*scalar);
+        in_vz_vec[ii] = in_vz_vec[ii] + (az*scalar);
+        
+        in_x_vec[ii] = in_x_vec[ii] + (in_vx_vec[ii]*scalar);
+        in_y_vec[ii] = in_y_vec[ii] + (in_vy_vec[ii]*scalar);
+        in_z_vec[ii] = in_z_vec[ii] + (in_vz_vec[ii]*scalar);
         
 		// Draw
-		int x = (int)((out_x_vec[ii] - min_x) * width_max_min_x_inv);
-		int y = (int)((out_y_vec[ii] - min_y) * height_max_min_y_inv);
+		int x = (int)((in_x_vec[ii] - min_x) * width_max_min_x_inv);
+		int y = (int)((in_y_vec[ii] - min_y) * height_max_min_y_inv);
 		
 		if((x >= 0) && (x < width) && (y >= 0) && (y < height))
 		{
-			float z_clamp_blue = fmaxf(-10.0, fminf(10.0, out_z_vec[ii]));
+			float z_clamp_blue = fmaxf(-10.0, fminf(10.0, in_z_vec[ii]));
 			unsigned z_color = floorf(0xFF * ((0.4 * 0.05 * (z_clamp_blue + 10.0)) + 0.6));
             unsigned type_color = (unsigned)(0xFF0000*in_type_vec[ii]);
             
@@ -191,28 +189,6 @@ __global__ void cuda_elementwise2(const float* __restrict__ in_x_vec, const floa
 		}
 	}
 }
-
-__global__ void cuda_copy_old_new(float* __restrict__ in_x_vec, float* __restrict__ in_y_vec, float* __restrict__ in_z_vec,
-                                  float* __restrict__ in_vx_vec, float* __restrict__ in_vy_vec, float* __restrict__ in_vz_vec,
-                                  const float* __restrict__ out_x_vec, const float* __restrict__ out_y_vec, const float* __restrict__ out_z_vec,
-                                  const float* __restrict__ out_vx_vec, const float* __restrict__ out_vy_vec, const float* __restrict__ out_vz_vec,
-                                  const unsigned num_particles
-                                  )
-{
-	unsigned idx = blockIdx.x * blockDim.x + threadIdx.x;
-	unsigned num_threads = gridDim.x * blockDim.x;
-	
-	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
-	{
-        in_x_vec[ii] = out_x_vec[ii];
-        in_y_vec[ii] = out_y_vec[ii];
-        in_z_vec[ii] = out_z_vec[ii];
-        
-        in_vx_vec[ii] = out_vx_vec[ii];
-        in_vy_vec[ii] = out_vy_vec[ii];
-        in_vz_vec[ii] = out_vz_vec[ii];
-    }
-}   
 
 float *out_x_vec;
 float *out_y_vec;
@@ -279,19 +255,10 @@ void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
             (x_vec, y_vec, z_vec,
              vx_vec, vy_vec, vz_vec,
              temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec,
-             out_x_vec,  out_y_vec,  out_z_vec,
-             out_vx_vec, out_vy_vec, out_vz_vec,
              mass_vec,
              type_vec,
              num_particles,
-             pixel_buf, width, height);
-        
-        cuda_copy_old_new<<<Parameters::num_blocks, Parameters::blocksize>>>
-            (x_vec, y_vec, z_vec,
-             vx_vec, vy_vec, vz_vec,
-             out_x_vec, out_y_vec, out_z_vec,
-             out_vx_vec, out_vy_vec, out_vz_vec,
-             num_particles);
+             pixel_buf, width, height);        
 	}
 }
 	
