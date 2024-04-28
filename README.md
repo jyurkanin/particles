@@ -33,6 +33,7 @@ direction.
 GPU is not meant to do this, the internet says this will be shit.
 I still want to try though.
 
+  * Using one block with blockDim.x = num_particles and __syncthreads()
 
 # Benchmark
 100 calls to runIteration()
