@@ -29,6 +29,18 @@ acting on the first 64 particles.
 Results will for the next 64 particles will be computed by moving along the gridDim.y
 direction.
 
+
+
+# Tile it better
+I want to see if implementing the code in the example n-body cuda
+sample by nvidia will lead to faster run time. They tile things
+different in a possibly smarter way, using less blocks but more
+synchronization. So I'm not sure that their way is better.
+
+The nvidia implementation (kernels8.cu) is slower because they have
+lower occupancy. Because they are only generating the same number of
+threads as objects. The other tiling method uses more threads.
+
 # Experiment with a grid level sync?
 GPU is not meant to do this, the internet says this will be shit.
 I still want to try though.
@@ -38,7 +50,7 @@ I still want to try though.
 		    Did run really fast though.
   * Using grid.sync()
 	Meh. Slow.
-
+	
 # Benchmark
 100 calls to runIteration()
 
@@ -56,3 +68,4 @@ I still want to try though.
 | 6       | 0.322963 | Tiled the computation. Lol. |
 | 6.1     | 0.24089  | Deleted the stupid copy kernel. |
 | 7       | 1.72301  | Synchronize the entire grid. Slow. |
+| 8       | 0.501846 | Different tiling method based on cuda's sample implementation. |

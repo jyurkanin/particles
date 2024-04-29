@@ -60,7 +60,7 @@ __global__ void cuda_tiled_forces(const float* __restrict__ in_x_vec, const floa
         mass_slice_other[threadIdx.x] = 0.0;  // This results in zero force and no effect on the rest of the program.
     }
     
-    __syncthreads(); // Guarantees all shared memory will be loaded.
+    //__syncthreads(); // Guarantees all shared memory will be loaded.
     // TODO: This only works when the num_threads > num_particles...
     
     if(idx < num_particles)    
