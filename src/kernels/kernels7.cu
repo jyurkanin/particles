@@ -62,7 +62,7 @@ __global__ void cuda_mega_kernel(float* __restrict__ in_x_vec, float* __restrict
             out_az_vec[ii] = az;
         }
         
-        // Global lock! Lol! Lmao even!
+        // Global lock!
         g.sync();
         
         for(unsigned ii = idx; ii < *num_particles; ii += num_threads)

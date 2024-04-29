@@ -13,119 +13,112 @@ __constant__ unsigned g_grid_dim;
 unsigned g_host_grid_dim;
 
     
-// out_big_ax_vec has shape [gridDim.y, num_particles] 
-__global__ void cuda_tiled_forces(const float* __restrict__ in_x_vec, const float* __restrict__ in_y_vec, const float* __restrict__ in_z_vec,
-                                  const float* __restrict__ in_vx_vec, const float* __restrict__ in_vy_vec, const float* __restrict__ in_vz_vec,
-                                  const float* __restrict__ in_mass_vec,
-                                  float* __restrict__ out_big_ax_vec, float* __restrict__ out_big_ay_vec, float* __restrict__ out_big_az_vec,
-                                  const int num_particles)
+__global__ void cuda_tiled_forces(float* __restrict__ in_x_vec, float* __restrict__ in_y_vec, float* __restrict__ in_z_vec,
+                                  float* __restrict__ in_vx_vec, float* __restrict__ in_vy_vec, float* __restrict__ in_vz_vec,
+                                  const float* __restrict__ in_mass_vec, const float* __restrict__ in_type_vec,
+                                  unsigned* __restrict__ pixel_buf, const int width, const int height,
+                                  const int num_particles,
+                                  const int num_tiles)
 {
     extern __shared__ float mem[];
     
-    float *x_slice_other = &mem[0*blockDim.x];
-    float *y_slice_other = &mem[1*blockDim.x];
-    float *z_slice_other = &mem[2*blockDim.x];
-    float *mass_slice_other = &mem[3*blockDim.x];
-    
-	unsigned num_threads = gridDim.x * gridDim.y * blockDim.x;
-    unsigned idx = threadIdx.x + (blockIdx.x * blockDim.x);
-    unsigned idx_other = threadIdx.x + (blockIdx.y * blockDim.x);
-    // assert(gridDim.x == gridDim.y);
-    // This will be true because both gridDim.x and gridDim.y
-    // will be computed to be the minimize size necessary such that, gridDim.x * blockDim.x
+    float *x_slice = &mem[0*blockDim.x];
+    float *y_slice = &mem[1*blockDim.x];
+    float *z_slice = &mem[2*blockDim.x];
+    float *mass_slice = &mem[3*blockDim.x];
 
-    float x_for_idx;
-    float y_for_idx;
-    float z_for_idx;
+    const float scalar = 1e-4;
+    const float min_x = -100;
+    const float max_x = 100;
+    const float min_y = -100;
+    const float max_y = 100;
+    
+    const float width_max_min_x_inv = width / (max_x - min_x);
+    const float height_max_min_y_inv = height / (max_y - min_y);
+    
+    unsigned idx = (blockIdx.x * blockDim.x) + threadIdx.x;
+	unsigned num_threads = gridDim.x * blockDim.x;
+
+    float x_for_idx = 0.0;
+    float y_for_idx = 0.0;
+    float z_for_idx = 0.0;
     
     if(idx < num_particles)
-    {    
+    {
         x_for_idx = in_x_vec[idx];
         y_for_idx = in_y_vec[idx];
         z_for_idx = in_z_vec[idx];
     }
-    
-    if(idx_other < num_particles)
-    {
-        x_slice_other[threadIdx.x] = in_x_vec[idx_other];
-        y_slice_other[threadIdx.x] = in_y_vec[idx_other];
-        z_slice_other[threadIdx.x] = in_z_vec[idx_other];
-        mass_slice_other[threadIdx.x] = in_mass_vec[idx_other];   
-    }
-    else
-    {
-        x_slice_other[threadIdx.x] = 1.0;
-        y_slice_other[threadIdx.x] = 1.0;
-        z_slice_other[threadIdx.x] = 1.0;
-        mass_slice_other[threadIdx.x] = 0.0;  // This results in zero force and no effect on the rest of the program.
-    }
-    
-    __syncthreads(); // Guarantees all shared memory will be loaded.
-    // TODO: This only works when the num_threads > num_particles...
-    
-    if(idx < num_particles)    
-    {
-        float ax = 0.0;
-        float ay = 0.0;
-        float az = 0.0;
-        for(unsigned ii = 0; ii < blockDim.x; ii++)
-        {
-            float dx = x_slice_other[ii] - x_for_idx;
-            float dy = y_slice_other[ii] - y_for_idx;
-            float dz = z_slice_other[ii] - z_for_idx;
-            float force_temp = mass_slice_other[ii] / fmaxf(1e-6, dx*dx + dy*dy + dz*dz);
-            ax += (force_temp * dx);
-            ay += (force_temp * dy);
-            az += (force_temp * dz);
-        }
-        
-        // Collect all the grid results for reduction later.
-        // when out_big_ax has shape [gridDim.y, num_particles] then it has coalesced memory access. (Good)
-        const unsigned particle_and_grid_idx = (blockIdx.y * num_particles) + idx;
-        out_big_ax_vec[particle_and_grid_idx] = ax;
-        out_big_ay_vec[particle_and_grid_idx] = ay;
-        out_big_az_vec[particle_and_grid_idx] = az;
-        
-        // printf("theadIdx.x: %d    particle_grid_idx: %d   ax: %f\n", threadIdx.x, particle_and_grid_idx, out_big_ax_vec[particle_and_grid_idx]);
-    }
-}
 
-__global__ void cuda_sum_along_blocks(const float* __restrict__ big_ax_vec, const float* __restrict__ big_ay_vec, const float* __restrict__ big_az_vec,
-                                      const float* __restrict__ in_vx_vec, const float* __restrict__ in_vy_vec, const float* __restrict__ in_vz_vec,
-                                      const float* __restrict__ in_mass_vec,
-                                      float* __restrict__ out_ax_vec, float* __restrict__ out_ay_vec, float* __restrict__ out_az_vec,
-                                      const unsigned num_particles)
-{
-	unsigned idx = (blockIdx.x * blockDim.x) + threadIdx.x;
-	unsigned num_threads = gridDim.x * blockDim.x;
+    const float damp_inv_mass = (1e-2 / in_mass_vec[idx]);
+    float ax = -damp_inv_mass * in_vx_vec[idx];
+    float ay = -damp_inv_mass * in_vy_vec[idx];
+    float az = -damp_inv_mass * in_vz_vec[idx];
     
-	// compute accelerations
-	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
-	{
-        const float damp_inv_mass = (1e-2 / in_mass_vec[ii]);
-        float ax = -damp_inv_mass * in_vx_vec[ii];
-        float ay = -damp_inv_mass * in_vy_vec[ii];
-        float az = -damp_inv_mass * in_vz_vec[ii];
-        
-        unsigned big_idx = ii;
-        for(unsigned jj = 0; jj < g_grid_dim; jj++)
+    for(int tile = 0; tile < num_tiles; tile++)
+    {
+        unsigned idx_other = threadIdx.x + (tile * blockDim.x);
+    
+        if(idx_other < num_particles)
         {
-            ax += big_ax_vec[big_idx];
-            ay += big_ay_vec[big_idx];
-            az += big_az_vec[big_idx];
-            
-            big_idx += num_particles;
+            x_slice[threadIdx.x] = in_x_vec[idx_other];
+            y_slice[threadIdx.x] = in_y_vec[idx_other];
+            z_slice[threadIdx.x] = in_z_vec[idx_other];
+            mass_slice[threadIdx.x] = in_mass_vec[idx_other];   
         }
+        else
+        {
+            x_slice[threadIdx.x] = 1.0;
+            y_slice[threadIdx.x] = 1.0;
+            z_slice[threadIdx.x] = 1.0;
+            mass_slice[threadIdx.x] = 0.0;  // This results in zero force and no effect on the rest of the program.
+        }
+    
+        __syncthreads(); // Guarantees all shared memory will be loaded.
+    
+        if(idx < num_particles)
+        {
+            for(unsigned ii = 0; ii < blockDim.x; ii++)
+            {
+                float dx = x_slice[ii] - x_for_idx;
+                float dy = y_slice[ii] - y_for_idx;
+                float dz = z_slice[ii] - z_for_idx;
+                float force_temp = mass_slice[ii] / fmaxf(1e-6, dx*dx + dy*dy + dz*dz);
+                ax += (force_temp * dx);
+                ay += (force_temp * dy);
+                az += (force_temp * dz);
+            }
+        }
+    }
+    
+    if(idx < num_particles)
+    {
+        in_vx_vec[idx] = in_vx_vec[idx] + (ax*scalar);
+        in_vy_vec[idx] = in_vy_vec[idx] + (ay*scalar);
+        in_vz_vec[idx] = in_vz_vec[idx] + (az*scalar);
         
-        out_ax_vec[ii] = ax;
-        out_ay_vec[ii] = ay;
-        out_az_vec[ii] = az;
+        in_x_vec[idx] = in_x_vec[idx] + (in_vx_vec[idx]*scalar);
+        in_y_vec[idx] = in_y_vec[idx] + (in_vy_vec[idx]*scalar);
+        in_z_vec[idx] = in_z_vec[idx] + (in_vz_vec[idx]*scalar);
+        
+        // Draw
+        int x = (int)((in_x_vec[idx] - min_x) * width_max_min_x_inv);
+        int y = (int)((in_y_vec[idx] - min_y) * height_max_min_y_inv);
+		
+        if((x >= 0) && (x < width) && (y >= 0) && (y < height))
+        {
+            float z_clamp_blue = fmaxf(-10.0, fminf(10.0, in_z_vec[idx]));
+            unsigned z_color = floorf(0xFF * ((0.4 * 0.05 * (z_clamp_blue + 10.0)) + 0.6));
+            unsigned type_color = (unsigned)(0xFF0000*in_type_vec[idx]);
+            
+            pixel_buf[(y*width) + x] = (z_color * (in_type_vec[idx] == 0)) + (type_color * (in_type_vec[idx] == 1));
+        }
     }
 }
     
 __global__ void cuda_elementwise2(float* __restrict__ in_x_vec, float* __restrict__ in_y_vec, float* __restrict__ in_z_vec,
                                   float* __restrict__ in_vx_vec, float* __restrict__ in_vy_vec, float* __restrict__ in_vz_vec,
-                                  const float* __restrict__ big_ax_vec, const float* __restrict__ big_ay_vec, const float* __restrict__ big_az_vec,
+                                  float* __restrict__ in_ax_vec, float* __restrict__ in_ay_vec, float* __restrict__ in_az_vec,
                                   const float* __restrict__ in_mass_vec,
                                   const float* __restrict__ in_type_vec,
                                   const int num_particles,
@@ -152,23 +145,14 @@ __global__ void cuda_elementwise2(float* __restrict__ in_x_vec, float* __restric
         float ay = -damp_inv_mass * in_vy_vec[ii];
         float az = -damp_inv_mass * in_vz_vec[ii];
 
-        // Sum along the block dimension for the big_vec's
-        unsigned big_idx = ii;
-        for(unsigned jj = 0; jj < g_grid_dim; jj++)
-        {
-            ax += big_ax_vec[big_idx];
-            ay += big_ay_vec[big_idx];
-            az += big_az_vec[big_idx];
-            
-            big_idx += num_particles;
-        }
-        
-        
+        in_ax_vec[ii] += ax;
+        in_ay_vec[ii] += ay;
+        in_az_vec[ii] += az;
         
 		// Euler update
-        in_vx_vec[ii] = in_vx_vec[ii] + (ax*scalar);
-        in_vy_vec[ii] = in_vy_vec[ii] + (ay*scalar);
-        in_vz_vec[ii] = in_vz_vec[ii] + (az*scalar);
+        in_vx_vec[ii] = in_vx_vec[ii] + (in_ax_vec[ii]*scalar);
+        in_vy_vec[ii] = in_vy_vec[ii] + (in_ay_vec[ii]*scalar);
+        in_vz_vec[ii] = in_vz_vec[ii] + (in_az_vec[ii]*scalar);
         
         in_x_vec[ii] = in_x_vec[ii] + (in_vx_vec[ii]*scalar);
         in_y_vec[ii] = in_y_vec[ii] + (in_vy_vec[ii]*scalar);
@@ -221,7 +205,7 @@ void init()
 
     unsigned num_bytes_needed_for_shared_mem = Parameters::blocksize * sizeof(float) * 4;
     assert(num_bytes_needed_for_shared_mem <= (4096*1024));
-
+    
     printf("Grid dim: %d\n", g_host_grid_dim);
     printf("Num bytes needed for shared mem: %d\n", num_bytes_needed_for_shared_mem);
     
@@ -239,26 +223,22 @@ void mega_kernel(float *x_vec, float *y_vec, float *z_vec,
                  const int num_particles,
 				 unsigned *pixel_buf, const int width, const int height)
 {
+    unsigned num_tiles = (num_particles + Parameters::blocksize - 1) / Parameters::blocksize;
+
+    assert(num_particles < (Parameters::num_blocks * Parameters::blocksize));
+    
 	for(unsigned i = 0; i < Parameters::num_iterations; i++)
 	{
         const unsigned num_shared_arrays = 4;
         const unsigned shared_mem_size = num_shared_arrays * Parameters::blocksize * sizeof(float);
         
-		cuda_tiled_forces<<<dim3(g_host_grid_dim, g_host_grid_dim), dim3(Parameters::blocksize), shared_mem_size>>>
+		cuda_tiled_forces<<<Parameters::num_blocks, Parameters::blocksize, shared_mem_size>>>
             (x_vec, y_vec, z_vec,
              vx_vec, vy_vec, vz_vec,
-             mass_vec,
-             temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec,
-             num_particles);
-        
-        cuda_elementwise2<<<Parameters::num_blocks, Parameters::blocksize>>>
-            (x_vec, y_vec, z_vec,
-             vx_vec, vy_vec, vz_vec,
-             temp_big_ax_vec, temp_big_ay_vec, temp_big_az_vec,
-             mass_vec,
-             type_vec,
+             mass_vec, type_vec,
+             pixel_buf, width, height,
              num_particles,
-             pixel_buf, width, height);        
+             num_tiles);
 	}
 }
 	

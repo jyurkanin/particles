@@ -8,7 +8,7 @@ struct Parameters
     static constexpr int seed{420};
     
     static constexpr unsigned num_iterations{100};
-    static constexpr unsigned num_blocks{128};
-    static constexpr unsigned blocksize{64};
+    static constexpr unsigned num_blocks{256};
+    static constexpr unsigned blocksize{128};
     
 };
