@@ -68,4 +68,4 @@ I still want to try though.
 | 6       | 0.322963 | Tiled the computation. Lol. |
 | 6.1     | 0.24089  | Deleted the stupid copy kernel. |
 | 7       | 1.72301  | Synchronize the entire grid. Slow. |
-| 8       | 0.501846 | Different tiling method based on cuda's sample implementation. |
+| 8       | 0.00102976 | As far as I can tell this is not a bug. Wtf. |

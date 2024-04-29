@@ -28,10 +28,10 @@ __global__ void cuda_tiled_forces(float* __restrict__ in_x_vec, float* __restric
     float *mass_slice = &mem[3*blockDim.x];
 
     const float scalar = 1e-4;
-    const float min_x = -100;
-    const float max_x = 100;
-    const float min_y = -100;
-    const float max_y = 100;
+    const float min_x = -400 + in_x_vec[0];
+    const float max_x = 400 + in_x_vec[0];
+    const float min_y = -400 + in_y_vec[0];
+    const float max_y = 400 + in_y_vec[0];
     
     const float width_max_min_x_inv = width / (max_x - min_x);
     const float height_max_min_y_inv = height / (max_y - min_y);
@@ -50,7 +50,7 @@ __global__ void cuda_tiled_forces(float* __restrict__ in_x_vec, float* __restric
         z_for_idx = in_z_vec[idx];
     }
 
-    const float damp_inv_mass = (1e-2 / in_mass_vec[idx]);
+    const float damp_inv_mass = (1e2 / in_mass_vec[idx]);
     float ax = -damp_inv_mass * in_vx_vec[idx];
     float ay = -damp_inv_mass * in_vy_vec[idx];
     float az = -damp_inv_mass * in_vz_vec[idx];
@@ -125,10 +125,10 @@ __global__ void cuda_elementwise2(float* __restrict__ in_x_vec, float* __restric
                                   unsigned* __restrict__ pixel_buf, const int width, const int height)
 {
     const float scalar = 1e-4;
-    const float min_x = -100;
-    const float max_x = 100;
-    const float min_y = -100;
-    const float max_y = 100;
+    const float min_x = -1000;
+    const float max_x =  1000;
+    const float min_y = -1000;
+    const float max_y =  1000;
     
     const float width_max_min_x_inv = width / (max_x - min_x);
     const float height_max_min_y_inv = height / (max_y - min_y);
@@ -140,7 +140,7 @@ __global__ void cuda_elementwise2(float* __restrict__ in_x_vec, float* __restric
 	for(unsigned ii = idx; ii < num_particles; ii += num_threads)
 	{
         // Compute damping
-        const float damp_inv_mass = (1e-2 / in_mass_vec[ii]);
+        const float damp_inv_mass = (1e-1 / in_mass_vec[ii]);
         float ax = -damp_inv_mass * in_vx_vec[ii];
         float ay = -damp_inv_mass * in_vy_vec[ii];
         float az = -damp_inv_mass * in_vz_vec[ii];

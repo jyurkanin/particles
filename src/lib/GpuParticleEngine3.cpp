@@ -91,7 +91,7 @@ void GpuParticleEngine3::initialize()
         m_ay_vec[i] = 0.0;
         m_az_vec[i] = 0.0;
         
-        m_mass_vec[i] = 1.0;
+        m_mass_vec[i] = 10.0;
         m_type_vec[i] = 0;
     }
 
