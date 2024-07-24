@@ -14,7 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(
   "-Wall"
   "$<$<CONFIG:Debug>:-O0;-g3;-ggdb3>"
-  "$<$<CONFIG:Release>:-O3;-mtune=native;-march=native;-DNDEBUG>"
+  "$<$<CONFIG:Release>:-O3;-mtune=native;-march=native;-DNDEBUG;-code=sm_86;-arch=compute_86>"
 )
 
 #add_compile_options(-fsanitize=undefined)
